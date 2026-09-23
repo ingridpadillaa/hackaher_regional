@@ -137,3 +137,10 @@ def confirm(draft_id):
             return redirect('/movimientos')
         except ValueError as error: flash(str(error))
     return render_template('confirm.html',draft=draft,categories=CATEGORIES,payments=payments)
+
+@bp.get('/reportes')
+@login_required
+def reports():
+    from app.services.reports import report
+    window=request.args.get('periodo','quincena')
+    return render_template('reports.html',report=report(visible_movements(g.hogar_id,g.user['uid']),repo().list(f'hogares/{g.hogar_id}/tickets'),window))
