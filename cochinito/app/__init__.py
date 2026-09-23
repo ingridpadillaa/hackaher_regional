@@ -70,4 +70,14 @@ def create_app(test_config=None):
     def error(err):
         return render_template('error.html', error=err), err.code
 
+    import click
+    @app.cli.command('profeco-sync')
+    @click.option('--file', 'file_path', type=click.Path(exists=True))
+    def profeco_sync(file_path):
+        from .services.profeco_etl import sync_prices
+        try:
+            click.echo(sync_prices(app.extensions['repo'], file_path))
+        except ValueError as error:
+            raise click.ClickException(str(error))
+
     return app
