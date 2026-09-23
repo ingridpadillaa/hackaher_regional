@@ -33,7 +33,7 @@ def save_movement(repository, household_id, uid, data, origin='manual', deduplic
         if current[path]: return {}, False
         summary=current[summary_path] or {'ingresos':0,'egresos':0,'porCategoria':{}}
         amount=movement['monto']
-        if movement['tipo']=='ingreso': summary['ingresosos' if False else 'ingresos']=round(summary['ingresos']+amount,2)
+        if movement['tipo']=='ingreso': summary['ingresos']=round(summary['ingresos']+amount,2)
         elif movement['tipo']=='gasto':
             summary['egresos']=round(summary['egresos']+amount,2)
             category=movement['categoria']
