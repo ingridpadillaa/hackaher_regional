@@ -1,0 +1,1 @@
+{"hosting":{"public":"app/static","rewrites":[{"source":"**","run":{"serviceId":"cochinito","region":"us-central1"}}]},"firestore":{"rules":"firestore.rules"},"storage":{"rules":"storage.rules"}}

@@ -1,0 +1,10 @@
+.venv/
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+instance/
+*.sqlite*
+.DS_Store
+service-account*.json
+cochinito/app/connectors/fixtures/recorded/

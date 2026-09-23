@@ -1,0 +1,6 @@
+.env
+instance
+__pycache__
+.pytest_cache
+tests
+service-account*.json
