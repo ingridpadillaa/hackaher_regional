@@ -32,9 +32,7 @@ class GeminiClient:
         from google.genai import types
 
         if not os.getenv("GEMINI_API_KEY"):
-            raise ExtractionUnavailable(
-                "Jami no está disponible en este momento. Puedes capturar a mano."
-            )
+            raise ExtractionUnavailable("Jami no está disponible en este momento. Puedes capturar a mano.")
         client = genai.Client(
             api_key=os.environ["GEMINI_API_KEY"], http_options=types.HttpOptions(timeout=8000)
         )

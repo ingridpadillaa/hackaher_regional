@@ -14,6 +14,16 @@ def add_period(day, periodicity, direction=1):
 
 
 def period(household, today):
+    if household.get("calendarioIngresos"):
+        intervals = []
+        for member in household["calendarioIngresos"]:
+            cadence = member["periodicidadIngreso"]
+            cadence = "mensual" if cadence == "variable" else cadence
+            end = date.fromisoformat(member["proximaFechaIngreso"])
+            while end <= today:
+                end = add_period(end, cadence)
+            intervals.append((add_period(end, cadence, -1), end))
+        return max(x[0] for x in intervals), min(x[1] for x in intervals)
     end = date.fromisoformat(household["proximaFechaIngreso"])
     cadence = household.get("periodicidadIngreso", "quincenal")
     start = date.fromisoformat(
@@ -42,6 +52,36 @@ def daily_budget(household, movements, payments, today=None, seasonal_weekly=0):
                 history.append(total)
             right = left
         income = sum(sorted(history)[:2]) / min(2, len(history)) if history else income * 0.9
+    if household.get("calendarioIngresos"):
+        income = 0
+        for member in household["calendarioIngresos"]:
+            cadence = member["periodicidadIngreso"]
+            cadence = "mensual" if cadence == "variable" else cadence
+            payday = date.fromisoformat(member["proximaFechaIngreso"])
+            while payday >= end:
+                payday = add_period(payday, cadence, -1)
+            while payday < start:
+                payday = add_period(payday, cadence)
+            while payday < end:
+                value = member["ingreso"]
+                if member["periodicidadIngreso"] == "variable":
+                    samples = []
+                    right = start
+                    for _ in range(6):
+                        left = add_period(right, cadence, -1)
+                        total = sum(
+                            m["monto"]
+                            for m in movements
+                            if m["tipo"] == "ingreso"
+                            and m.get("integranteId") in (member.get("uid"), member.get("id"))
+                            and left.isoformat() <= m["fecha"] < right.isoformat()
+                        )
+                        if total:
+                            samples.append(total)
+                        right = left
+                    value = sum(sorted(samples)[:2]) / min(2, len(samples)) if samples else value * 0.9
+                income += value
+                payday = add_period(payday, cadence)
     relevant = [m for m in movements if start.isoformat() <= m["fecha"] < end.isoformat()]
     paid_ids = {(m.get("pagoFijoId"), m.get("pagoFecha")) for m in relevant}
     committed = savings = 0
@@ -60,9 +100,11 @@ def daily_budget(household, movements, payments, today=None, seasonal_weekly=0):
     spent = sum(m["monto"] for m in relevant if m["tipo"] == "gasto" and m["metodoPago"] != "credito")
     # Card transfers consume cash once the corresponding fixed commitment is marked paid.
     spent += sum(m["monto"] for m in relevant if m["tipo"] == "transferencia" and m.get("pagoFijoId"))
+    savings += household.get("ahorroSugerido", 0) * (end - start).days / 30.4375
     reserved = savings + seasonal_weekly * (end - start).days / 7
     available = income - committed - reserved - spent
     return dict(
+        has_income=income > 0,
         daily=round(max(0, available / max(1, (end - today).days)), 2),
         available=round(available, 2),
         income=round(income, 2),

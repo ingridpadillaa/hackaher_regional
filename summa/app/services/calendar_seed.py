@@ -22,6 +22,7 @@ def easter(year):
 def seed_calendar(repository):
     import json
     from pathlib import Path
+
     catalog = json.loads((Path(__file__).resolve().parents[2] / "data/temporadas.json").read_text())
     entries = catalog["entries"]
     for year in (local_today().year, local_today().year + 1):

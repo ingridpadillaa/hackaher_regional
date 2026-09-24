@@ -16,7 +16,7 @@ def login_required(view):
     def wrapped(*args, **kwargs):
         cookie = request.cookies.get("__session")
         try:
-            if (current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING")):
+            if current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING"):
                 uid = URLSafeTimedSerializer(current_app.secret_key, salt="demo").loads(
                     cookie or "", max_age=432000
                 )["uid"]
@@ -33,7 +33,11 @@ def login_required(view):
         g.hogar_id = user.get("hogarId")
         if g.hogar_id and not repo().get(f"hogares/{g.hogar_id}/integrantes/{uid}"):
             abort(403)
-        if (not g.hogar_id or user.get("personalizacionCompleta") is False) and request.endpoint not in ("inicio.onboarding", "auth.logout", "perfil.privacy"):
+        if (not g.hogar_id or user.get("personalizacionCompleta") is False) and request.endpoint not in (
+            "inicio.onboarding",
+            "auth.logout",
+            "perfil.privacy",
+        ):
             return redirect(url_for("inicio.onboarding"))
         return view(*args, **kwargs)
 
@@ -60,7 +64,7 @@ def login():
 
 @bp.post("/session")
 def create_session():
-    if (current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING")):
+    if current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING"):
         abort(404)
     from firebase_admin import auth
 
@@ -94,7 +98,10 @@ def demo():
     if not name:
         abort(400, "Escribe tu nombre para crear tu cuenta local.")
     uid = uuid.uuid4().hex
-    repo().put(f"usuarios/{uid}", {"nombre": name, "email": "", "hogarId": None, "rol": "admin", "personalizacionCompleta": False})
+    repo().put(
+        f"usuarios/{uid}",
+        {"nombre": name, "email": "", "hogarId": None, "rol": "admin", "personalizacionCompleta": False},
+    )
     cookie = URLSafeTimedSerializer(current_app.secret_key, salt="demo").dumps({"uid": uid})
     response = redirect("/")
     response.set_cookie("__session", cookie, max_age=432000, httponly=True, secure=False, samesite="Lax")

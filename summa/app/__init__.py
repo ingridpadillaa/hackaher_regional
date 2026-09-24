@@ -19,19 +19,23 @@ def create_app(test_config=None):
     from io import BytesIO
 
     from flask import Request
+
     class MemoryRequest(Request):
         def _get_file_stream(self, total_content_length, content_type, filename=None, content_length=None):
             return BytesIO()
+
     app.request_class = MemoryRequest
     try:
         if app.config["DATA_BACKEND"] == "firestore":
             import firebase_admin
+
             if not firebase_admin._apps:
                 firebase_admin.initialize_app(options={"projectId": os.getenv("FIREBASE_PROJECT_ID")})
         app.extensions["repo"] = Repository(app)
     except Exception:
         app.logger.error("No se pudo inicializar Firestore; revisa ADC y FIREBASE_PROJECT_ID.")
     from .health import check
+
     check(app)
     from .services.server_session import FirebaseUISessionInterface
 
@@ -75,7 +79,11 @@ def create_app(test_config=None):
 
     @app.context_processor
     def context():
-        return dict(local_mode=app.config.get("LOCAL_MODE") or app.config.get("TESTING"), demo_mode=app.config["DEMO_MODE"], today=local_today().isoformat())
+        return dict(
+            local_mode=app.config.get("LOCAL_MODE") or app.config.get("TESTING"),
+            demo_mode=app.config["DEMO_MODE"],
+            today=local_today().isoformat(),
+        )
 
     app.jinja_env.filters["money"] = lambda value: f"${float(value or 0):,.2f}"
     for name in (
@@ -95,11 +103,13 @@ def create_app(test_config=None):
     def health():
         if not (app.debug or app.config.get("LOCAL_MODE") or app.config.get("TESTING")):
             from .auth import login_required
+
             @login_required
             def admin_health():
                 if g.user.get("rol") != "admin":
                     abort(403)
                 return app.extensions["health"]
+
             return admin_health()
         return app.extensions["health"]
 
@@ -123,6 +133,21 @@ def create_app(test_config=None):
 
         try:
             click.echo(sync_prices(app.extensions["repo"], file_path))
+        except ValueError as error:
+            raise click.ClickException(str(error))
+
+    @app.cli.command("seed-demo")
+    @click.option("--email", required=True)
+    @click.option("--confirm", is_flag=True)
+    @click.option("--reset", is_flag=True)
+    def seed_demo_command(email, confirm, reset):
+        if not confirm or "@" not in email:
+            raise click.ClickException("Se requiere --email de una cuenta aparte y --confirm.")
+        from .services.demo_seed import seed_demo
+
+        try:
+            uid, hid = seed_demo(app.extensions["repo"], email, reset)
+            click.echo(f"Hogar de ensayo creado: {hid}. Cuenta: {uid}. Sin precios ni tiendas.")
         except ValueError as error:
             raise click.ClickException(str(error))
 

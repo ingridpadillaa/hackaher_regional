@@ -12,33 +12,9 @@
     </div>
     <div class="grid dashboard">
         <div class="stack">
-            <section class="hero">
-                <span class="eyebrow">VAMOS UN DÍA A LA VEZ</span>
-                <p>Hoy puedes gastar</p>
-                <div class="amount">{{ budget.daily|money }}</div>
-                <p>Y seguir cuidando tus próximos pagos.</p>
-                <span class="badge">{{ budget.days }} días para tu próximo ingreso · {{ budget.end }}</span>
-                {% if budget.available<0 %}
-                    <p class="notice">Esta quincena vas {{ (-budget.available)|money }} por encima.</p>
-                {% endif %}
-                <div class="row"
-                     style="margin-top:26px;
-                            border-top:1px solid #a84f5222;
-                            padding-top:20px">
-                    <div>
-                        <small>Disponible del periodo</small>
-                        <p>
-                            <strong>{{ budget.available|money }}</strong>
-                        </p>
-                    </div>
-                    <div>
-                        <small>Pagos comprometidos</small>
-                        <p>
-                            <strong>{{ budget.committed|money }}</strong>
-                        </p>
-                    </div>
-                </div>
-            </section>
+            <section class="hero budget-hero">
+{% if budget.has_income %}<p>Hoy puedes gastar</p><div class="amount">{{ budget.daily|money }}</div><div class="row"><p>Ingreso del periodo<br><strong>{{ budget.income|money }}</strong></p><p>Disponible hasta {{ budget.end }}<br><strong>{{ budget.available|money }}</strong></p></div><progress max="{{ budget.income }}" value="{{ [budget.spent,budget.income]|min }}" aria-label="Ingreso gastado"></progress><details><summary>¿Cómo se calcula?</summary><p>Ingreso {{ budget.income|money }} − pagos pendientes {{ budget.committed|money }} − ahorro y temporadas {{ budget.reserved|money }} − gastos pagados {{ budget.spent|money }} = {{ budget.available|money }}.</p><p>Dividimos el disponible entre {{ budget.days }} días hasta el siguiente cobro. Las compras con crédito se consideran al pagar la tarjeta.</p></details>{% if budget.available<0 %}<p role="alert">Esta quincena vas {{ (-budget.available)|money }} por encima.</p>{% endif %}
+{% else %}<img class="jami-art" src="/static/img/jami-pensando.png" alt=""><h2>Completa tu personalización para calcular cuánto puedes gastar</h2><a class="button" href="/perfil/personalizacion">Completar</a>{% endif %}</section>
             <section class="card">
                 <div class="row">
                     <h2>Lo que viene</h2>
@@ -59,30 +35,8 @@
             </section>
         </div>
         <div class="stack">
-            <section class="card soft">
-                <div class="row">
-                    <span class="eyebrow">TU SALUD FINANCIERA</span>
-                    <span>♡</span>
-                </div>
-                <div class="metric">{{ (score|string + ' / 100') if score is not none else 'En construcción' }}</div>
-                <div class="progress">
-                    <span style="width:{{ score or 0 }}%"></span>
-                </div>
-                <p class="subtle">{{ 'Cada pequeño hábito cuenta. Sigamos así.' if score is not none else 'Con 14 días de registros podremos conocerte mejor.' }}</p>
-            </section>
-            <section class="card">
-                <span class="eyebrow">PARA LOS IMPREVISTOS</span>
-                <div class="row">
-                    <h2>Tu colchón</h2>
-                    <span class="list-icon">◕</span>
-                </div>
-                <span class="metric">{{ household.fondoEmergencia|money }}</span>
-                <small>de {{ monthly|money }}</small>
-                <div class="progress">
-                    <span style="width:{{ cushion_progress }}%"></span>
-                </div>
-                <p class="subtle">Meta sugerida: un mes de tus gastos promedio.</p>
-            </section>
+<section class="card"><span class="eyebrow">TU PROGRESO</span><img class="jami-art" src="/static/img/jami-ahorro.png" alt="Jami cuida tu ahorro"><h2>🔥 {{ streak.get('diasActuales',0) }} días de ahorro</h2>{% if goal %}<h3>{{ goal.nombre }}</h3><p>{{ goal.ahorrado|money }} de {{ goal.montoObjetivo|money }}</p><progress max="{{ goal.montoObjetivo }}" value="{{ goal.ahorrado }}" aria-label="Avance de tu meta"></progress>{% if goal.aporteSugeridoSemanal %}<p>Aporte sugerido de esta semana: {{ goal.aporteSugeridoSemanal|money }}</p>{% endif %}{% else %}<p>Define tu meta y empieza tu racha.</p><a href="/perfil/personalizacion" class="button secondary">Crear meta</a>{% endif %}</section>
+<section class="card soft"><h2>Un consejo de Jami</h2><p>Registra tus gastos de hoy para mantener tu disponible al día.</p><a href="/movimientos/nuevo">Registrar gasto →</a></section>
             {% if season %}
                 <a class="card soft" href="/calendario">
                     <span class="eyebrow">UN PASITO ADELANTE</span>

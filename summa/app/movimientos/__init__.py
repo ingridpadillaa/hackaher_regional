@@ -152,9 +152,7 @@ def upload(kind):
 
 def require_ai_consent():
     if not g.user.get("consentimientos", {}).get("iaDatos"):
-        raise ValueError(
-            "Activa el consentimiento de IA en Perfil para analizar documentos reales."
-        )
+        raise ValueError("Activa el consentimiento de IA en Perfil para analizar documentos reales.")
 
 
 @bp.route("/confirmar/<draft_id>", methods=["GET", "POST"])

@@ -61,4 +61,3 @@ def parse_pdf(content):
             "No pudimos procesar el PDF. Prueba uno con texto seleccionable o captura manual."
         ) from exc
     return result
-

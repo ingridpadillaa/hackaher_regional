@@ -1,4 +1,5 @@
 """Startup diagnostics: missing services never create synthetic data."""
+
 import os
 import sqlite3
 from pathlib import Path
@@ -36,7 +37,9 @@ def check(app):
             issues.append("La base de PROFECO necesita una carga válida.")
     else:
         issues.append("No hay precios PROFECO. Ejecuta flask profeco-sync --file RUTA.")
-    app.extensions["health"] = dict(ready=connected, local=app.config.get("LOCAL_MODE", False), issues=issues, profeco=latest)
+    app.extensions["health"] = dict(
+        ready=connected, local=app.config.get("LOCAL_MODE", False), issues=issues, profeco=latest
+    )
     for issue in issues:
         app.logger.warning(issue)
     return app.extensions["health"]

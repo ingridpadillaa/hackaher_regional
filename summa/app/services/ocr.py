@@ -44,4 +44,3 @@ def analyze_image(content, mime):
         content,
         mime,
     )
-

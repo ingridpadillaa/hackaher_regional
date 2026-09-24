@@ -33,7 +33,8 @@ def logged(client, app):
     from itsdangerous import URLSafeTimedSerializer
 
     from tests.legacy_seed import seed_household
+
     uid = "regression-user"
     seed_household(app.extensions["repo"], uid)
-    client.set_cookie("__session", URLSafeTimedSerializer(app.secret_key, salt="demo").dumps({"uid":uid}))
+    client.set_cookie("__session", URLSafeTimedSerializer(app.secret_key, salt="demo").dumps({"uid": uid}))
     return client
