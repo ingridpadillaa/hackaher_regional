@@ -28,7 +28,15 @@ class ServiceData(BaseModel):
 
 class Receipt(BaseModel):
     tipo_documento: Literal[
-        "ticket", "recibo_luz", "recibo_agua", "recibo_gas", "recibo_internet", "nota", "comprobante_transferencia", "factura", "otro"
+        "ticket",
+        "recibo_luz",
+        "recibo_agua",
+        "recibo_gas",
+        "recibo_internet",
+        "nota",
+        "comprobante_transferencia",
+        "factura",
+        "otro",
     ] = "ticket"
     comercio: str = Field(max_length=120)
     fecha: date

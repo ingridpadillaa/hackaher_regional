@@ -26,7 +26,7 @@
                 </a>
                 {% if g.user %}
                     <a class="icon-btn" href="/calendario" aria-label="Calendario">▦</a>
-                    <a class="icon-btn" href="/notificaciones" aria-label="Notificaciones">♧</a><span class="avatar">{{ g.user.nombre[:1] }}</span>
+                    <a class="icon-btn" href="/notificaciones" aria-label="Notificaciones">♧ {{ unread_notifications or '' }}</a><span class="avatar">{{ g.user.nombre[:1] }}</span>
                 {% endif %}
             </header>
             {% if demo_mode %}

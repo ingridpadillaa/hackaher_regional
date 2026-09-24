@@ -79,7 +79,14 @@ def create_app(test_config=None):
 
     @app.context_processor
     def context():
+        unread = 0
+        if getattr(g, "hogar_id", None):
+            unread = sum(
+                not n.get("leida")
+                for n in app.extensions["repo"].list(f"hogares/{g.hogar_id}/notificaciones")
+            )
         return dict(
+            unread_notifications=unread,
             local_mode=app.config.get("LOCAL_MODE") or app.config.get("TESTING"),
             demo_mode=app.config["DEMO_MODE"],
             today=local_today().isoformat(),

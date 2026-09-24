@@ -17,6 +17,9 @@ bp = Blueprint("inicio", __name__)
 @login_required
 def index():
     base = f"hogares/{g.hogar_id}"
+    from app.services.planning import refresh_plan
+
+    refresh_plan(repo(), g.hogar_id)
     household = repo().get(base)
     movements = visible_movements(g.hogar_id, g.user["uid"])
     payments = repo().list(base + "/pagosFijos")
@@ -204,3 +207,31 @@ def breakdown():
         repo().list(base + "/pagosFijos"),
         seasonal_weekly=events[0]["weekly"] if events else 0,
     )
+
+
+@bp.get("/notificaciones")
+@login_required
+def notifications():
+    from app.services.notifications import refresh
+
+    refresh(repo(), g.hogar_id)
+    return render_template(
+        "notifications.html",
+        notifications=sorted(
+            repo().list(f"hogares/{g.hogar_id}/notificaciones"), key=lambda n: n["creadaEn"], reverse=True
+        ),
+    )
+
+
+@bp.post("/notificaciones/<notification_id>/leer")
+@login_required
+def read_notification(notification_id):
+    from flask import abort
+
+    path = f"hogares/{g.hogar_id}/notificaciones/{notification_id}"
+    item = repo().get(path)
+    if not item:
+        abort(404)
+    item["leida"] = True
+    repo().put(path, item)
+    return redirect("/notificaciones")

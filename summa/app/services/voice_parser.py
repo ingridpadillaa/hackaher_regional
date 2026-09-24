@@ -29,7 +29,7 @@ def parse_voice(text, allow_ai=False, demo=False, today=None):
     if not text:
         raise ValueError("Escribe o dicta un movimiento.")
     if not allow_ai:
-        raise ValueError('Activa el consentimiento de IA en Perfil o usa captura manual.')
+        raise ValueError("Activa el consentimiento de IA en Perfil o usa captura manual.")
     result = get_llm().extract(
         f"Extrae movimientos sin inventar montos. Si falta monto usa null. Hoy {today}, zona America/Monterrey. Categorías {list(CATEGORIES)}. Texto: {text}",
         VoiceResult,
