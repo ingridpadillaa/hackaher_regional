@@ -1,74 +1,75 @@
-import hashlib
+import math
 
-from flask import Blueprint, abort, current_app, g, redirect, render_template, request
+from flask import Blueprint, abort, flash, g, redirect, render_template, request
 
 from app.auth import login_required
+from app.services.categorizer import normalize
 from app.services.firestore_repo import repo
-from app.services.replenishment import compare_prices, predict
+from app.services.products import product_id, suggestions, update_products
+from app.services.replenishment import compare_prices
 
-bp = Blueprint("mandado", __name__, url_prefix="/mandado")
+bp=Blueprint('mandado',__name__,url_prefix='/mandado')
 
 
 def shopping_data(household_id):
-    base = f"hogares/{household_id}"
-    predictions = predict(repo().list(base + "/tickets"))
-    items = repo().list(base + "/mandado")
-    if not items:
-        names = [p["product"] for p in predictions]
-        items = [
-            dict(id=hashlib.sha256(name.encode()).hexdigest(), name=name, checked=False, suggested=True)
-            for name in names
-        ]
-    products = [i["name"] for i in items if not i.get("checked")]
-    household = repo().get(base)
-    prices = [
-        p
-        for p in repo().list("precios")
-        if (current_app.config["DEMO_MODE"] or p.get("fuente") != "demo")
-        and (not p.get("estado") or p["estado"] == household.get("estado"))
-    ]
-    prices += repo().list(base + "/preciosTicket")
-    comparisons, totals = compare_prices(prices, products)
-    return dict(items=items, predictions=predictions, comparisons=comparisons, totals=totals)
+    base=f'hogares/{household_id}'
+    products=update_products(repo(),household_id)
+    cart=repo().get(base+'/carrito/actual') or {'items':[]}
+    predictions=[p for p in suggestions(products) if p['productoId'] not in cart.get('dismissed',[])]
+    items=[dict(i,id=i['productoId'],name=i['nombre'],checked=False) for i in cart['items']]
+    prices=repo().list(base+'/preciosTicket')
+    comparisons,totals=compare_prices(prices,[i['nombre'] for i in cart['items']])
+    return dict(items=items,predictions=predictions,comparisons=comparisons,totals=totals,products=products)
 
 
-@bp.route("", methods=["GET", "POST"])
+@bp.route('',methods=['GET','POST'])
 @login_required
 def index():
-    if request.method == "POST":
-        name = request.form.get("name", "").strip()[:120]
-        if name:
-            path = f"hogares/{g.hogar_id}/mandado"
-            # Materialize initial suggestions before the first edit.
-            if not repo().list(path):
-                for item in shopping_data(g.hogar_id)["items"]:
-                    repo().put(path + "/" + item["id"], item)
-            repo().put(path + "/" + hashlib.sha256(name.encode()).hexdigest(), dict(name=name, checked=False))
-        return redirect("/mandado")
-    return render_template("mandado.html", **shopping_data(g.hogar_id))
+    base=f'hogares/{g.hogar_id}'
+    if request.method=='POST':
+        name=request.form.get('name','').strip()[:180]
+        try:
+            quantity=float(request.form.get('quantity',1))
+            if not name or not math.isfinite(quantity) or not 0<quantity<=1000:
+                raise ValueError()
+            pid=product_id(name)
+            path=base+'/carrito/actual'
+            def update(current):
+                cart=current[path] or {'items':[]}
+                items=[i for i in cart['items'] if i['productoId']!=pid]
+                items.append(dict(productoId=pid,nombre=name,cantidad=quantity,origen='prediccion' if request.form.get('prediction') else 'busqueda'))
+                cart['items']=items
+                return {path:cart},None
+            repo().atomic([path],update)
+        except ValueError:
+            flash('Revisa el producto y la cantidad.')
+        return redirect('/mandado')
+    data=shopping_data(g.hogar_id)
+    query=normalize(request.args.get('q',''))
+    results=[p for p in data['products'] if query and query in normalize(p['nombreNormalizado'])]
+    return render_template('mandado.html',**data,results=results,query=request.args.get('q',''))
 
 
-@bp.post("/<item_id>/toggle")
-@login_required
-def toggle(item_id):
-    path = f"hogares/{g.hogar_id}/mandado"
-    if not repo().list(path):
-        for item in shopping_data(g.hogar_id)["items"]:
-            repo().put(path + "/" + item["id"], item)
-    item = repo().get(path + "/" + item_id)
-    if not item:
-        abort(404)
-    item["checked"] = not item.get("checked")
-    repo().put(path + "/" + item_id, item)
-    return redirect("/mandado")
-
-
-@bp.post("/<item_id>/borrar")
+@bp.post('/<item_id>/borrar')
+@bp.post('/<item_id>/toggle')
 @login_required
 def delete(item_id):
-    path = f"hogares/{g.hogar_id}/mandado"
-    if not repo().list(path):
-        for item in shopping_data(g.hogar_id)["items"]:
-            repo().put(path + "/" + item["id"], item)
-    repo().delete(f"hogares/{g.hogar_id}/mandado/{item_id}")
-    return redirect("/mandado")
+    path=f'hogares/{g.hogar_id}/carrito/actual'
+    def update(current):
+        cart=current[path] or {'items':[]}
+        cart['items']=[i for i in cart['items'] if i['productoId']!=item_id]
+        return {path:cart},None
+    repo().atomic([path],update)
+    return redirect('/mandado')
+
+
+@bp.post('/<product>/descartar')
+@login_required
+def dismiss(product):
+    path=f'hogares/{g.hogar_id}/carrito/actual'
+    def update(current):
+        cart=current[path] or {'items':[]}
+        cart['dismissed']=list(set(cart.get('dismissed',[])+[product]))
+        return {path:cart},None
+    repo().atomic([path],update)
+    return redirect('/mandado')
