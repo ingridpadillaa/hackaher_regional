@@ -265,7 +265,7 @@ export async function privateBankAction(
     !["bankDisconnect", "bankEraseImports"].includes(action)
   )
     throw fail(
-      "Usa una cuenta personal y un hogar privado; no conectes tu banco real al hogar de prueba.",
+      "Este hogar no admite conexiones bancarias reales.",
     );
   if (
     mode === "live" &&
@@ -330,7 +330,7 @@ export async function privateBankAction(
       const availability = await bankAvailability(config);
       if (mode === "live" && !availability.liveEnabled)
         throw fail(
-          "Syncfy aún no habilita BBVA real para esta integración. No introduzcas tus datos en sandbox.",
+          "Syncfy aún no habilita BBVA real para esta integración. No introduzcas tus datos hasta que la conexión esté disponible.",
         );
       const sites = availability[mode];
       if (!sites.length)
@@ -468,7 +468,7 @@ export async function privateBankAction(
     if (action === "bankImport") {
       if (mode === "sandbox" && !homeData.esDemo)
         throw fail(
-          "Los movimientos ficticios solo se importan en hogares de prueba.",
+          "Ese modo de conexión no está disponible para este hogar.",
         );
       const input = z
         .object({

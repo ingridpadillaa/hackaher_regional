@@ -9,7 +9,7 @@ export function BankConnect({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
-  const [mode, setMode] = useState<"live" | "sandbox">("live");
+  const [mode] = useState<"live">("live");
   const [availability, setAvailability] = useState<any>(null),
     [connection, setConnection] = useState<any>(null);
   const [accepted, setAccepted] = useState(false),
@@ -32,7 +32,7 @@ export function BankConnect({
       .then((r) => {
         if (live.current) {
           setAvailability(r);
-          setStatus("Selecciona el entorno y revisa el consentimiento.");
+          setStatus("Revisa el consentimiento para continuar.");
         }
       })
       .catch((e) => live.current && setError(errorMessage(e)));
@@ -129,9 +129,7 @@ export function BankConnect({
       w.open();
       setConnection({ ...connection, consented: true });
       setStatus(
-        session.sandbox
-          ? "Solo datos de prueba: no introduzcas credenciales BBVA reales."
-          : "Completa la autorización únicamente en el formulario de Syncfy.",
+        "Completa la autorización únicamente en el formulario de Syncfy.",
       );
     });
   }
@@ -146,32 +144,17 @@ export function BankConnect({
     });
   }
   const selected = Object.entries(choices).filter(([, c]) => c.selected);
-  const unavailable = mode === "live" && !availability?.liveEnabled;
+  const unavailable = !availability?.liveEnabled;
   return (
     <Modal
       title="Conectar y gestionar mi banco"
       onClose={() => !busy && onClose()}
     >
-      <Field label="Entorno bancario">
-        <select
-          value={mode}
-          disabled={busy}
-          onChange={(e) => setMode(e.target.value as any)}
-        >
-          <option value="live">Mi cuenta real BBVA</option>
-          <option value="sandbox">Prueba con datos ficticios</option>
-        </select>
-      </Field>
-      <span className="badge">
-        {mode === "live"
-          ? "Consulta bancaria personal"
-          : "Sandbox · Datos ficticios"}
-      </span>
+      <span className="badge">Consulta bancaria personal</span>
       {unavailable && availability && (
         <p role="alert">
-          La integración actual no tiene BBVA real habilitado. No introduzcas tu
-          tarjeta, contraseña o token en el entorno de prueba. Falta habilitar
-          producción con Syncfy.
+          La conexión bancaria todavía no está disponible. No introduzcas tu
+          tarjeta, contraseña o token hasta que Syncfy confirme disponibilidad.
         </p>
       )}
       <p className="helper">

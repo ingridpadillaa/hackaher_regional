@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   Users,
-  Heart,
   Target,
   Bell,
-  ChevronRight,
   Plus,
   LogOut,
 } from "lucide-react";
@@ -19,7 +17,7 @@ import {
   emptyMember,
   money,
 } from "./types";
-import { Logo, Button, Next, Modal, Field, ErrorText } from "./ui";
+import { Logo, Jami, Button, Modal, Field, ErrorText } from "./ui";
 import { MemberEditor, ShareHome } from "./Household";
 const defaults: Preferences = {
   municipality: "",
@@ -137,16 +135,19 @@ export function Profile({
     <main className="page profile-page">
       {initial && <Logo />}
       {initial && <span className="step-label">2 DE 2 · PERSONALIZACIÓN</span>}
-      <header className="intro">
-        <h1>
-          Personaliza
-          <br />
-          <em>tu experiencia</em>
-        </h1>
-        <p>
-          Administra los integrantes de tu hogar
-          <br />y sus preferencias de notificaciones.
-        </p>
+      <header className="intro profile-intro">
+        <div>
+          <h1>
+            Personaliza
+            <br />
+            <em>tu experiencia</em>
+          </h1>
+          <p>
+            Administra los integrantes de tu hogar
+            <br />y sus preferencias de notificaciones.
+          </p>
+        </div>
+        <Jami kind="tareas-transparente" className="profile-mascot" />
       </header>
       <form onSubmit={save}>
         <section className="card">
@@ -193,7 +194,6 @@ export function Profile({
               Define objetivos y registra tus aportaciones en Simulador.
             </small>
           </span>
-          <ChevronRight size={18} />
         </Link>
         <section className="card">
           <div className="section-heading">
@@ -239,6 +239,17 @@ export function Profile({
               />
             </label>
           ))}
+          {!initial && (
+            <div className="card-actions">
+              <ErrorText text={error} />
+              {saved && (
+                <p className="success" role="status">
+                  Preferencias guardadas.
+                </p>
+              )}
+              <Button busy={busy}>Guardar preferencias</Button>
+            </div>
+          )}
         </section>
         {initial && (
           <>
@@ -297,9 +308,20 @@ export function Profile({
               </label>
               <p className="helper">
                 La conexión bancaria se autoriza de forma individual en
-                Simulador → Conectar mi banco. No acredita ahorro
+                Simulador, en Conectar mi banco. No acredita ahorro
                 automáticamente.
               </p>
+              <div className="card-actions">
+                <ErrorText text={error} />
+                {saved && (
+                  <p className="success" role="status">
+                    Preferencias guardadas.
+                  </p>
+                )}
+                <Button busy={busy}>
+                  Guardar preferencias y empezar
+                </Button>
+              </div>
             </section>
           </>
         )}
@@ -308,19 +330,6 @@ export function Profile({
             La persona administradora edita los datos compartidos del hogar.
           </p>
         )}
-        <ErrorText text={error} />
-        {saved && (
-          <p className="success" role="status">
-            Preferencias guardadas.
-          </p>
-        )}
-        <Button busy={busy}>
-          <Next>
-            {initial
-              ? "Guardar preferencias y empezar"
-              : "Guardar preferencias"}
-          </Next>
-        </Button>
       </form>
       {!initial && (
         <section className="card">

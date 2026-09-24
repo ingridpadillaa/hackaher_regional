@@ -101,11 +101,18 @@ export function compareStores(
     .slice(0, 3);
 }
 export async function catalogStores(db: any, area: any) {
-  // Reverse geocoding always supplies the municipality. Querying the whole
-  // state with a limit could exclude the nearby branches as the catalog grows.
+  // With exact coordinates, include neighboring municipalities in the same
+  // state and let the distance filter choose nearby branches. This matters in
+  // contiguous metro areas such as Ciudad Madero–Tampico.
+  const hasCoordinates =
+    area.latitude !== undefined && area.longitude !== undefined;
+  const stateKey = normalize(area.state ?? "");
+  const field = hasCoordinates && stateKey ? "stateKey" : "municipalityKey";
+  const value =
+    field === "stateKey" ? stateKey : normalize(area.municipality ?? "");
   const query = db
     .collection("stores")
-    .where("municipalityKey", "==", normalize(area.municipality));
+    .where(field, "==", value);
   const snap = await query.limit(250).get();
   return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 }

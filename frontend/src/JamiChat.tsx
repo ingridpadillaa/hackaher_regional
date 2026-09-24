@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { Send, X, MessageCircle } from "lucide-react";
+import { Send, X } from "lucide-react";
 import { auth, call, errorMessage } from "./firebase";
 import { Jami } from "./ui";
 type Answer = { reply: string; route?: string; mode?: string; notice?: string };
@@ -109,7 +109,7 @@ export function JamiChat() {
         aria-controls="jami-chat"
         onClick={() => setOpen(!open)}
       >
-        {open ? <X /> : <Jami kind="avatar" />}
+        {open ? <X /> : <Jami kind="tablet" className="chat-bubble-mascot" />}
       </button>
       {open && (
         <section
@@ -122,7 +122,6 @@ export function JamiChat() {
           }}
         >
           <header>
-            <Jami kind="avatar" className="chat-mascot" />
             <strong>Jami, contigo</strong>
             <button
               className="icon-button"

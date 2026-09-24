@@ -108,7 +108,6 @@ export async function replyToChat(
               remaining: Math.max(0, g.target - g.saved),
             })),
             tone: "cercano",
-            demo: !!state.home.esDemo,
           }),
         },
       ],

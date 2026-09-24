@@ -1,12 +1,11 @@
 import { BankConnect } from "./BankConnect";
 import { useEffect, useState } from "react";
 import {
-  Flame,
   CheckCircle2,
+  Flame,
   Plus,
   Target,
   Pencil,
-  TrendingUp,
   Landmark,
 } from "lucide-react";
 import { type State, type Goal, money, dateLabel } from "./types";
@@ -226,9 +225,6 @@ export function Simulator({
                 {g.targetDate && (
                   <small>Fecha objetivo: {dateLabel(g.targetDate)}</small>
                 )}
-                <p className="helper">
-                  Ahorro registrado · no verificado por banco
-                </p>
                 <div className="saving-actions">
                   <Button
                     className="secondary"
@@ -316,7 +312,6 @@ export function Simulator({
           </div>
         </div>
         <div className="simulation-result" aria-live="polite">
-          <TrendingUp />
           {!goal ? (
             <p>Primero crea una meta.</p>
           ) : duration !== null ? (
@@ -342,30 +337,16 @@ export function Simulator({
         La simulación no mueve dinero ni modifica tus aportaciones registradas.
       </p>
       <div className="encouragement">
-        <Jami kind="avatar" />
         <div>
-          <h3>¡Vas muy bien!</h3>
-          <p>
-            Cada revisión te ayuda a conocer mejor tu dinero.{" "}
-            <span className="pink">♥</span>
-          </p>
+          <h3>Vas muy bien</h3>
+          <p>Cada revisión te ayuda a conocer mejor tu dinero.</p>
         </div>
       </div>
       <section className="card">
-        {state.bank.sandboxConnected && (
-          <p className="helper">
-            Conexión de prueba activa: {state.bank.sandboxAccountCount} cuentas
-            y {state.bank.sandboxTransactionCount} movimientos. Estos datos no
-            cuentan como ahorro real.
-          </p>
-        )}
         <div className="section-heading">
           <Landmark className="pink" />
           <div>
             <h3>Mi conexión bancaria</h3>
-            {state.bank.sandbox && (
-              <span className="badge">Sandbox · Datos de prueba</span>
-            )}
             <small>
               {state.bank.lastSync
                 ? `Última sincronización: ${state.bank.lastSync}`

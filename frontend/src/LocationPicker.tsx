@@ -228,7 +228,7 @@ export function LocationPicker({
           target="_blank"
           rel="noopener noreferrer"
         >
-          Ver zona en Google Maps ↗
+          Ver zona en Google Maps
         </a>
       )}
       {temporary && (

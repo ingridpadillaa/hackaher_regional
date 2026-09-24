@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Plus, ChevronRight, Receipt, CheckCircle2 } from "lucide-react";
+import { Plus, Receipt, CheckCircle2 } from "lucide-react";
 import { type State, type Movement, money, dateLabel } from "./types";
-import { CategoryIcon, Empty, Modal, Button, ErrorText } from "./ui";
+import { CategoryIcon, Empty, Modal, ErrorText } from "./ui";
 import { Agenda } from "./Agenda";
 import { call, errorMessage } from "./firebase";
 const colors = [
@@ -29,7 +29,6 @@ export function History({
         {onAll && (
           <button className="text-button" onClick={onAll}>
             Ver todos
-            <ChevronRight size={16} />
           </button>
         )}
       </div>
@@ -99,10 +98,7 @@ export function Home({
   });
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const [all, setAll] = useState(false),
-    [budgetOpen, setBudgetOpen] = useState(false),
-    [budget, setBudget] = useState("");
-  const [revision, setRevision] = useState(0);
+  const [all, setAll] = useState(false);
   useEffect(() => {
     let active = true;
     setBusy(true);
@@ -120,7 +116,7 @@ export function Home({
     return () => {
       active = false;
     };
-  }, [month, state, revision]);
+  }, [month, state]);
   const summary = report.summary;
   const max = Math.max(summary.receivedIncome, summary.expenses, 1);
   return (
@@ -211,24 +207,6 @@ export function Home({
               a metas no son ingresos nuevos. Este balance no representa un
               saldo bancario.
             </p>
-            <div className="budget-line">
-              <span>
-                {summary.budget > 0
-                  ? `Límite de gasto: ${money(summary.budget)} · Restante: ${money(summary.budgetRemaining)}`
-                  : "Sin presupuesto definido para este mes."}
-              </span>
-              {state.user.rol === "admin" && (
-                <button
-                  className="text-button"
-                  onClick={() => {
-                    setBudget(String(summary.budget));
-                    setBudgetOpen(true);
-                  }}
-                >
-                  Editar presupuesto
-                </button>
-              )}
-            </div>
             <h3>Gastos por categoría</h3>
             {summary.byCategory
               .filter((c) => c.amount > 0)
@@ -269,49 +247,6 @@ export function Home({
           onClose={() => setAll(false)}
         >
           <History items={report.movements} />
-        </Modal>
-      )}
-      {budgetOpen && (
-        <Modal
-          title="Presupuesto del mes"
-          onClose={() => !busy && setBudgetOpen(false)}
-        >
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setBusy(true);
-              setError("");
-              try {
-                await call("saveBudget", { month, amount: Number(budget) });
-                await onSaved();
-                setRevision((x) => x + 1);
-                setBudgetOpen(false);
-              } catch (e) {
-                setError(errorMessage(e));
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <label className="field">
-              Límite de gasto para {month}
-              <input
-                type="number"
-                min="0"
-                max="1000000000"
-                step="0.01"
-                required
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-              />
-            </label>
-            <p>
-              Es un límite de gasto, no un ingreso. Cero significa sin
-              presupuesto.
-            </p>
-            <ErrorText text={error} />
-            <Button busy={busy}>Guardar presupuesto</Button>
-          </form>
         </Modal>
       )}
     </main>

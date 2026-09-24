@@ -5,7 +5,6 @@ import {
   Users,
   Share2,
   Copy,
-  ChevronRight,
   Trash2,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -270,7 +269,6 @@ export function Household({ onSaved }: { onSaved: () => Promise<void> }) {
                       {m.period}
                     </small>
                   </span>
-                  <ChevronRight size={18} />
                 </button>
                 <button
                   className="icon-button"
