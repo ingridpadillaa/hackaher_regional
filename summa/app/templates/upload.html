@@ -2,9 +2,9 @@
 {% block content %}
     <section class="card form-card">
         <span class="eyebrow">MENOS CAPTURA, MÁS VIDA</span>
-        <h1>{{ {'foto':'Foto de ticket','recibo':'Tu recibo','voz':'Cuéntanos tu gasto','pdf':'Estado de cuenta'}[kind] }}</h1>
+        {% include 'register_method.html' %}
         <p>Revisa cada dato antes de guardarlo. Tú tienes la última palabra.</p>
-        <form method="post"
+        <form method="post" action="/movimientos/importar/{{ kind }}"
               enctype="multipart/form-data"
               onsubmit="this.querySelector('[data-status]').hidden=false">
             <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
@@ -28,13 +28,13 @@
                                name="redacted">Oculté nombres, direcciones y números de cuenta de la imagen.
                     </label>
                 {% endif %}
-                <p class="subtle">Hasta 10 MB. El archivo se procesa temporalmente y no se conserva.</p>
+                <p class="subtle">Hasta 10 MB. Tus fotos y documentos no se almacenan.</p>
             {% endif %}
             <button>Analizar y revisar →</button>
             
-            <p data-status hidden role="status">Analizando…</p>
+            <p data-status hidden role="status">Jami está leyendo tu información…</p>
         </form>
-        <a href="/movimientos/nuevo" class="subtle">Prefiero capturarlo a mano ↗</a>
+        <a href="/movimientos/nuevo?metodo=manual" class="subtle">Prefiero capturarlo a mano ↗</a>
     </section>
 {% endblock %}
 {% block scripts %}

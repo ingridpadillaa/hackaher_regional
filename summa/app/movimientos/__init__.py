@@ -2,7 +2,7 @@ import hashlib
 import io
 from datetime import UTC, datetime
 
-from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session
 
 from app.auth import login_required
 from app.services.categorizer import CATEGORIES, normalize
@@ -31,6 +31,12 @@ def index():
 @bp.route("/nuevo", methods=["GET", "POST"])
 @login_required
 def new():
+    if request.method == 'GET':
+        method = request.args.get('metodo') or session.get('register_method','manual')
+        if method in ('ticket','foto','pdf','voz'):
+            session['register_method'] = method
+            return render_template('upload.html',kind=method)
+        session['register_method'] = 'manual'
     if request.method == "POST":
         try:
             save_movement(
@@ -59,14 +65,14 @@ def delete(movement_id):
 @bp.route("/importar/<kind>", methods=["GET", "POST"])
 @login_required
 def upload(kind):
-    if kind not in ("foto", "recibo", "voz", "pdf"):
+    if kind not in ("ticket", "foto", "recibo", "voz", "pdf"):
         abort(404)
     if request.method == "GET":
-        return render_template("upload.html", kind=kind)
+        return redirect("/movimientos/nuevo?metodo=" + kind)
     try:
         receipt = None
         is_demo = False
-        if kind in ("foto", "recibo"):
+        if kind in ("ticket", "foto", "recibo"):
             require_ai_consent()
             if not request.form.get("redacted"):
                 raise ValueError(
@@ -227,6 +233,8 @@ def confirm(draft_id):
                 return redirect("/movimientos")
             count = 0
             for item in movements:
+                rule_key = hashlib.sha256(normalize(item.get('comercio') or item.get('descripcion','')).encode()).hexdigest()
+                repo().put(f'{base}/reglasCategoria/{rule_key}', {'categoria':item['categoria']})
                 if payment:
                     item["pagoFijoId"] = payment_id
                     item["pagoFecha"] = payment["proximaFecha"]

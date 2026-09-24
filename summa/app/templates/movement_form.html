@@ -3,7 +3,7 @@
     {% set item = item|default({}) %}
     <section class="card form-card">
         <span class="eyebrow">UN PEQUEÑO HÁBITO</span>
-        <h1>{{ 'Editar movimiento' if item else 'Registrar movimiento' }}</h1>
+        {% if item %}<h1>Editar movimiento</h1>{% else %}{% include 'register_method.html' %}{% endif %}
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
             <label>
