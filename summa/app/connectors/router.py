@@ -13,7 +13,7 @@ class ProviderRouter:
     def __init__(self, repository, demo=False, providers=None, clock=time.time):
         self.repo, self.demo, self.clock = repository, demo, clock
         self.providers = providers or (
-            {name: SimulatedProvider(name) for name in ("syncfy", "finerio", "simulated")}
+            {"syncfy": SyncfyProvider(), "finerio": FinerioProvider(), "simulated": SimulatedProvider()}
             if demo
             else {"syncfy": SyncfyProvider(), "finerio": FinerioProvider()}
         )

@@ -10,7 +10,7 @@ from app.services.clock import local_today
 
 from .categorizer import categorize, is_card_payment
 from .firestore_repo import repo
-from .movements import delete_movement, save_movement
+from .movements import delete_movement
 
 
 def cipher():
@@ -94,28 +94,39 @@ def sync_connection(household_id, connection_id):
                 ),
             )
         for tx in transactions:
-            save_movement(
-                repo(),
-                household_id,
-                connection["uid"],
+            import hashlib
+
+            draft_id = "bank-" + hashlib.sha256((connection_id + tx.externalId).encode()).hexdigest()
+            draft_path = f"{base}/borradores/{draft_id}"
+            if repo().get(draft_path):
+                continue
+            movement = dict(
+                monto=abs(tx.monto),
+                fecha=tx.fecha.isoformat(),
+                descripcion=tx.descripcion,
+                comercio=tx.descripcion,
+                tipo="transferencia"
+                if is_card_payment(tx.descripcion)
+                else "ingreso"
+                if tx.monto > 0
+                else "gasto",
+                metodoPago=tx.metodoPago,
+                categoria=categorize(tx.descripcion, provider_category=tx.categoriaProveedor),
+                cuentaId=tx.cuentaId,
+                externalId=tx.externalId,
+                conexionId=connection_id,
+            )
+            movement["esPrueba"] = connection["proveedor"] == "simulated"
+            repo().put(
+                draft_path,
                 dict(
-                    monto=abs(tx.monto),
-                    fecha=tx.fecha.isoformat(),
-                    descripcion=tx.descripcion,
-                    comercio=tx.descripcion,
-                    tipo="transferencia"
-                    if is_card_payment(tx.descripcion)
-                    else "ingreso"
-                    if tx.monto > 0
-                    else "gasto",
-                    metodoPago=tx.metodoPago,
-                    categoria=categorize(tx.descripcion, provider_category=tx.categoriaProveedor),
-                    cuentaId=tx.cuentaId,
-                    externalId=tx.externalId,
-                    conexionId=connection_id,
+                    uid=connection["uid"],
+                    origin="banco",
+                    movements=[movement],
+                    receipt=None,
+                    demo=movement["esPrueba"],
+                    created=datetime.now(UTC).isoformat(),
                 ),
-                origin="banco",
-                deduplicate=True,
             )
         connection.update(estado="activa", ultimaSincronizacion=datetime.now(UTC).isoformat(), error=None)
         repo().put(f"{base}/conexiones/{connection_id}", connection)
@@ -142,7 +153,7 @@ def queue_sync(household_id, connection_id):
                 sync_connection(household_id, connection_id)
 
         Thread(target=work, daemon=True).start()
-    # Production Cloud Scheduler drains pending connections; requests never fetch bank data.
+    # The sync-banks CLI drains pending connections; views read stored data only.
 
 
 def disconnect(household_id, connection_id, delete_imported=False):

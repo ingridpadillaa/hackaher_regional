@@ -55,7 +55,7 @@ def save_movement(repository, household_id, uid, data, origin="manual", deduplic
     path = f"{base}/movimientos/{doc_id}"
     summary_path = f"{base}/resumenes/{movement['fecha'][:7]}"
     movement.update(integranteId=uid, origen=origin, hashDedup=digest, creadoEn=datetime.now(UTC).isoformat())
-    for key in ("pagoFijoId", "pagoFecha", "externalId", "conexionId"):
+    for key in ("pagoFijoId", "pagoFecha", "externalId", "conexionId", "esPrueba"):
         if data.get(key):
             movement[key] = data[key]
 

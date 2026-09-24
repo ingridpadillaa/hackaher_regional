@@ -7,7 +7,13 @@ from app.services.bank_sync import connect_bank, sync_connection
 
 def test_failover_and_existing_connection(app):
     repo = app.extensions["repo"]
-    router = ProviderRouter(repo, demo=True)
+    from app.connectors.simulated import SimulatedProvider
+
+    router = ProviderRouter(
+        repo,
+        demo=True,
+        providers={name: SimulatedProvider(name) for name in ("syncfy", "finerio", "simulated")},
+    )
     repo.put("estadoProveedores/syncfy", {"forced": True})
     name, _ = router.connect("u")
     assert name == "finerio"
@@ -21,9 +27,10 @@ def test_sync_idempotent(app):
         repository = app.extensions["repo"]
         connection = connect_bank("h", "u")
         assert sync_connection("h", connection)
-        count = len(repository.list("hogares/h/movimientos"))
+        count = len(repository.list("hogares/h/borradores"))
+        assert not repository.list("hogares/h/movimientos")
         assert sync_connection("h", connection)
-        assert len(repository.list("hogares/h/movimientos")) == count
+        assert len(repository.list("hogares/h/borradores")) == count
         assert repository.list("hogares/h/pagosFijos")[0]["datosTarjeta"]["pagoSinIntereses"] == 2100
 
 

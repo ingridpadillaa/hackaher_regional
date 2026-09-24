@@ -16,6 +16,11 @@ def index():
     base = f"hogares/{g.hogar_id}"
     return render_template(
         "perfil.html",
+        bank_drafts=[
+            d
+            for d in repo().list(base + "/borradores")
+            if d.get("origin") == "banco" and d.get("uid") == g.user["uid"] and not d.get("confirmed")
+        ],
         household=repo().get(base),
         members=repo().list(base + "/integrantes"),
         connections=repo().list(base + "/conexiones"),
@@ -180,7 +185,7 @@ def delete_account():
         from app.services.alerts import refresh_alerts
 
         refresh_alerts(repo(), g.hogar_id)
-    if not current_app.config["DEMO_MODE"]:
+    if not (current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING")):
         from firebase_admin import auth
 
         auth.delete_user(g.user["uid"])
@@ -220,6 +225,9 @@ def edit_profile():
     user.pop("uid", None)
     user["nombre"] = name
     repo().put("usuarios/" + g.user["uid"], user)
-    repo().put(f"hogares/{g.hogar_id}/integrantes/{g.user['uid']}", {"nombre": name, "rol": user["rol"]})
+    path = f"hogares/{g.hogar_id}/integrantes/{g.user['uid']}"
+    member = repo().get(path) or {}
+    member.update(nombre=name, rol=user["rol"])
+    repo().put(path, member)
     flash("Perfil actualizado.")
     return redirect("/perfil")

@@ -25,14 +25,14 @@
             </div>
         </section>
         <section class="card soft">
-            <h2>Conexiones</h2>
+            <h2>Conexiones</h2>{% for draft in bank_drafts %}<p><a class="button secondary" href="/movimientos/confirmar/{{ draft.id }}">Revisar movimiento bancario {{ "· Datos de prueba" if draft.demo }}</a></p>{% endfor %}
             <p>Tu banco puede ayudarte a registrar. Conectarlo siempre es opcional.</p>
             {% if demo_mode %}
-                <p class="subtle">Los tres proveedores de este panel son simulados. Todos usan Banco de prueba.</p>
+                <p class="subtle">Solo Banco de prueba contiene Datos de prueba. Syncfy y Finerio permanecen sin configurar hasta validar sus contratos.</p>
             {% endif %}
             {% for connection in connections %}
                 <div class="receipt">
-                    <strong>{{ connection.proveedor|capitalize }} {{ '(simulado)' if demo_mode }}</strong>
+                    <strong>{{ connection.proveedor|capitalize }} {{ '· Datos de prueba' if connection.proveedor=='simulated' }}</strong>
                     <p>{{ connection.estado }} · Última actualización: {{ connection.ultimaSincronizacion or 'pendiente' }}</p>
                     {% if connection.error %}
                         <p>{{ connection.error }}</p>
@@ -105,7 +105,7 @@
                 <div class="list-row">
                     <div class="detail">
                         <strong>{{ provider.name|capitalize }}</strong>
-                        <p class="subtle">{{ 'Fallo forzado' if provider.forced else 'Simulación disponible' if demo_mode else 'Sin configurar' }} · {{ provider.fallosConsecutivos or 0 }} fallos</p>
+                        <p class="subtle">{{ 'Fallo forzado' if provider.forced else 'Banco de prueba · Datos de prueba' if provider.name=='simulated' and demo_mode else 'Sin configurar' }} · {{ provider.fallosConsecutivos or 0 }} fallos</p>
                     </div>
                     {% if demo_mode %}
                         <form method="post" action="/perfil/proveedores/{{ provider.name }}/fallo">
