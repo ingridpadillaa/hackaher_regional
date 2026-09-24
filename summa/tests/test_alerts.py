@@ -34,4 +34,4 @@ def test_private_alert_does_not_leak():
 
 
 def test_payments_page(logged):
-    assert logged.get("/pagos-fijos").status_code == 200
+    assert logged.get("/perfil/personalizacion/pagos").status_code == 200

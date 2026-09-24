@@ -331,7 +331,7 @@ def edit(movement_id):
         abort(403)
     if item.get("pagoFijoId"):
         flash("Este registro está vinculado a un pago fijo.")
-        return redirect("/pagos-fijos")
+        return redirect("/perfil/personalizacion/pagos")
     if request.method == "POST":
         try:
             edit_movement(

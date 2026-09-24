@@ -8,7 +8,7 @@ from app.services.alerts import refresh_alerts
 from app.services.firestore_repo import repo, visible_movements
 from app.services.recurrence import detect_recurrences
 
-bp = Blueprint("pagos_fijos", __name__, url_prefix="/pagos-fijos")
+bp = Blueprint("pagos_fijos", __name__, url_prefix="/perfil/personalizacion/pagos")
 
 
 @bp.route("", methods=["GET", "POST"])
@@ -72,7 +72,7 @@ def index():
             flash("Pago fijo agregado.")
         except (ValueError, KeyError):
             flash("Revisa los datos del pago fijo.")
-        return redirect("/pagos-fijos")
+        return redirect("/perfil/personalizacion/pagos")
     payments = repo().list(base + "/pagosFijos")
     recurrences = detect_recurrences(visible_movements(g.hogar_id, g.user["uid"]))
     return render_template(
@@ -93,7 +93,7 @@ def paid(payment_id):
         abort(404)
     if request.form.get("due") != payment["proximaFecha"]:
         flash("Este pago ya cambió. Revisa su próxima fecha.")
-        return redirect("/pagos-fijos")
+        return redirect("/perfil/personalizacion/pagos")
     from app.services.fixed_payments import record_payment
 
     try:
@@ -102,7 +102,7 @@ def paid(payment_id):
         flash("Pago registrado y próxima fecha actualizada." if saved else "Este pago ya fue registrado.")
     except ValueError as error:
         flash(str(error))
-    return redirect("/pagos-fijos")
+    return redirect("/perfil/personalizacion/pagos")
 
 
 @bp.post("/<payment_id>/editar")
@@ -123,4 +123,4 @@ def edit(payment_id):
         repo().put(path, payment)
     except (ValueError, KeyError):
         flash("Revisa el monto y la fecha.")
-    return redirect("/pagos-fijos")
+    return redirect("/perfil/personalizacion/pagos")

@@ -33,7 +33,7 @@ def login_required(view):
         g.hogar_id = user.get("hogarId")
         if g.hogar_id and not repo().get(f"hogares/{g.hogar_id}/integrantes/{uid}"):
             abort(403)
-        if not g.hogar_id and request.endpoint not in ("inicio.onboarding", "auth.logout", "perfil.privacy"):
+        if (not g.hogar_id or user.get("personalizacionCompleta") is False) and request.endpoint not in ("inicio.onboarding", "auth.logout", "perfil.privacy"):
             return redirect(url_for("inicio.onboarding"))
         return view(*args, **kwargs)
 
