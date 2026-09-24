@@ -16,12 +16,18 @@ export function MemberEditor({
   member,
   onSave,
   onClose,
+  onDelete,
 }: {
   member: Member;
   onSave: (m: Member) => void;
   onClose: () => void;
+  onDelete?: () => void;
 }) {
   const [m, setM] = useState(member);
+  const [age, setAge] = useState(member.name ? String(member.age) : "");
+  const [income, setIncome] = useState(
+    member.name ? String(member.income) : "",
+  );
   const change = (k: keyof Member, v: unknown) => setM({ ...m, [k]: v });
   return (
     <Modal
@@ -31,7 +37,7 @@ export function MemberEditor({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSave(m);
+          onSave({ ...m, age: Number(age), income: Number(income) });
         }}
       >
         <Field label="Nombre">
@@ -49,8 +55,10 @@ export function MemberEditor({
               min="0"
               max="120"
               required
-              value={m.age}
-              onChange={(e) => change("age", Number(e.target.value))}
+              inputMode="numeric"
+              placeholder="Edad en años"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
             />
           </Field>
           <Field label="Perfil">
@@ -109,8 +117,10 @@ export function MemberEditor({
               max="10000000"
               step="0.01"
               required
-              value={m.income}
-              onChange={(e) => change("income", Number(e.target.value))}
+              inputMode="decimal"
+              placeholder="0.00"
+              value={income}
+              onChange={(e) => setIncome(e.target.value)}
             />
           </Field>
           <Field label="Periodicidad">
@@ -125,6 +135,15 @@ export function MemberEditor({
           </Field>
         </div>
         <Button>Guardar perfil</Button>
+        {onDelete && (
+          <Button
+            type="button"
+            className="secondary danger-text"
+            onClick={onDelete}
+          >
+            Eliminar perfil
+          </Button>
+        )}
       </form>
     </Modal>
   );

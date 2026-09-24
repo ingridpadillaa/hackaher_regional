@@ -126,3 +126,7 @@ No se ha ejecutado un despliegue exitoso ni una prueba pública. El primer despl
 `backend/app/`, sus pruebas Python y las guías `docs/CONEXIONES.md`, `docs/ESTADO.md` y `docs/DEMO.md` describen la versión Flask. No deben usarse como instrucciones del frontend React. Se conservan para consultar lógica que aún no se haya portado.
 
 Referencias: [Firebase Hosting](https://firebase.google.com/docs/hosting/), [funciones callable](https://firebase.google.com/docs/functions/callable), [secretos](https://firebase.google.com/docs/functions/config-env), [Syncfy REST](https://github.com/Paybook/sync-rest), [widget oficial](https://github.com/Paybook/sync-widget), [variables Vite](https://vite.dev/guide/env-and-mode).
+
+## Perfil y chatbot
+
+Consulta [Perfil, Jami y demostración](JAMI_Y_PERFIL.md) para la edición centralizada de integrantes, el chatbot y la configuración de Gemini. El ingreso mensual se calcula desde los perfiles; no se pide otro monto junto a los permisos.

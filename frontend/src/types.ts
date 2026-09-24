@@ -64,6 +64,7 @@ export interface State {
     id: string;
     name: string;
     ownerUid: string;
+    esDemo?: boolean;
     invitationCode: string;
     members: Member[];
     preferences?: Preferences;

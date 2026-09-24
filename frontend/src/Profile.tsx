@@ -1,15 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
-  GraduationCap,
-  BriefcaseBusiness,
   Heart,
   Target,
   Bell,
   ChevronRight,
   Plus,
   LogOut,
-  ArrowLeft,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth, call, errorMessage } from "./firebase";
@@ -18,6 +15,7 @@ import {
   type Preferences,
   type Member,
   emptyMember,
+  money,
 } from "./types";
 import { Logo, Button, Next, Modal, Field, ErrorText } from "./ui";
 import { MemberEditor, ShareHome } from "./Household";
@@ -52,8 +50,26 @@ export function Profile({
       : (home.preferences?.privacyAccepted ?? false),
   });
   const [members, setMembers] = useState<Member[]>(home.members);
+  useEffect(() => {
+    setMembers(home.members);
+  }, [home.members]);
+  const monthlyIncome =
+    Math.round(
+      members.reduce(
+        (total, member) =>
+          total +
+          member.income *
+            (member.period === "semanal"
+              ? 52 / 12
+              : member.period === "quincenal"
+                ? 2
+                : 1),
+        0,
+      ) * 100,
+    ) / 100;
   const [section, setSection] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -70,7 +86,7 @@ export function Profile({
       await call(
         owner ? "savePreferences" : "completeMemberProfile",
         owner
-          ? { ...prefs, members }
+          ? { ...prefs, members, monthlyBudget: monthlyIncome }
           : { privacyAccepted: prefs.privacyAccepted },
       );
       await onSaved();
@@ -81,25 +97,39 @@ export function Profile({
       setBusy(false);
     }
   }
+  async function removeMember() {
+    if (deleting === null) return;
+    const member = members[deleting];
+    setBusy(true);
+    setError("");
+    try {
+      if (member.id) {
+        await call("deleteMember", { memberId: member.id });
+        await onSaved();
+      }
+      setMembers((current) =>
+        current.filter((item) =>
+          member.id ? item.id !== member.id : item !== member,
+        ),
+      );
+      setDeleting(null);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   const panels = [
     {
-      title: "Estudios",
-      subtitle: "Nivel educativo de cada persona",
-      icon: GraduationCap,
-    },
-    {
-      title: "Trabajo e ingresos",
-      subtitle: "¿A qué se dedica cada persona y cuánto ingresa?",
-      icon: BriefcaseBusiness,
-    },
-    {
       title: "Estilo de vida",
-      subtitle: "Dinos cómo es tu día a día",
+      subtitle:
+        "Hábitos para que Jami adapte sus consejos; no cambia tu presupuesto.",
       icon: Heart,
     },
     {
       title: "Metas prioritarias",
-      subtitle: "¿Qué quieres lograr con SUMMA?",
+      subtitle:
+        "Temas que Jami debe priorizar; las metas con monto se crean en Simulador.",
       icon: Target,
     },
     {
@@ -226,66 +256,79 @@ export function Profile({
             </label>
           ))}
         </section>
-        <section className="card profile-settings">
-          <div className="form-grid">
-            <Field label="Municipio">
-              <input
-                required={owner}
-                disabled={!owner}
-                maxLength={120}
-                value={prefs.municipality}
-                placeholder="Municipio del hogar"
-                onChange={(e) => change("municipality", e.target.value)}
-              />
-            </Field>
-            <Field label="Presupuesto mensual (MXN)">
-              <input
-                type="number"
-                required={owner}
-                disabled={!owner}
-                min="0.01"
-                max="10000000"
-                step="0.01"
-                value={prefs.monthlyBudget || ""}
-                onChange={(e) =>
-                  change("monthlyBudget", Number(e.target.value))
-                }
-              />
-            </Field>
-          </div>
-          <label className="check-line">
-            <input
-              type="checkbox"
-              required
-              checked={prefs.privacyAccepted}
-              onChange={(e) => change("privacyAccepted", e.target.checked)}
-            />
-            Acepto el{" "}
-            <a href="/privacidad.html" target="_blank" rel="noreferrer">
-              aviso de privacidad
-            </a>
-            .
-          </label>
-          <label className="check-line">
-            <input
-              type="checkbox"
-              checked={prefs.aiConsent}
-              disabled={!owner}
-              onChange={(e) => change("aiConsent", e.target.checked)}
-            />
-            Permito a Jami analizar mis documentos con IA. Mis fotos y
-            documentos no se almacenan.
-          </label>
-          <label className="check-line">
-            <input
-              type="checkbox"
-              checked={prefs.bankConsent}
-              disabled={!owner}
-              onChange={(e) => change("bankConsent", e.target.checked)}
-            />
-            Quiero conectar mi banco para verificar mi ahorro.
-          </label>
-        </section>
+        {initial && (
+          <>
+            <section
+              className="card profile-income"
+              aria-label="Ingreso registrado"
+            >
+              <h2>Ingreso mensual del hogar</h2>
+              <strong>{money(monthlyIncome)}</strong>
+              <p>
+                Calculado con los ingresos que registraste en los perfiles.
+                Puedes corregirlos seleccionando a la persona en Tu hogar.
+              </p>
+              <small>
+                Quincenal: 2 pagos al mes. Semanal: promedio de 52 semanas entre
+                12 meses.
+              </small>
+            </section>
+            <section className="card profile-settings">
+              <h2>Ubicación del hogar</h2>
+              <div>
+                <Field label="Municipio">
+                  <input
+                    required={owner}
+                    disabled={!owner}
+                    maxLength={120}
+                    value={prefs.municipality}
+                    placeholder="Municipio del hogar"
+                    onChange={(e) => change("municipality", e.target.value)}
+                  />
+                </Field>
+              </div>
+            </section>
+            <section className="card profile-settings">
+              <h2>Privacidad y permisos</h2>
+              <label className="check-line">
+                <input
+                  type="checkbox"
+                  required
+                  checked={prefs.privacyAccepted}
+                  onChange={(e) => change("privacyAccepted", e.target.checked)}
+                />
+                <span>
+                  Acepto el{" "}
+                  <a href="/privacidad.html" target="_blank" rel="noreferrer">
+                    aviso de privacidad
+                  </a>
+                  .
+                </span>
+              </label>
+              <label className="check-line">
+                <input
+                  type="checkbox"
+                  checked={prefs.aiConsent}
+                  disabled={!owner}
+                  onChange={(e) => change("aiConsent", e.target.checked)}
+                />
+                <span>
+                  Permito a Jami analizar mis documentos con IA. Mis fotos y
+                  documentos no se almacenan.
+                </span>
+              </label>
+              <label className="check-line">
+                <input
+                  type="checkbox"
+                  checked={prefs.bankConsent}
+                  disabled={!owner}
+                  onChange={(e) => change("bankConsent", e.target.checked)}
+                />
+                <span>Quiero conectar mi banco para verificar mi ahorro.</span>
+              </label>
+            </section>
+          </>
+        )}
         {!owner && (
           <p className="helper">
             La persona administradora edita los datos compartidos del hogar.
@@ -315,6 +358,14 @@ export function Profile({
       {editing !== null && (
         <MemberEditor
           member={members[editing] ?? emptyMember()}
+          onDelete={
+            owner && members[editing]?.id !== home.ownerUid && members[editing]
+              ? () => {
+                  setDeleting(editing);
+                  setEditing(null);
+                }
+              : undefined
+          }
           onClose={() => setEditing(null)}
           onSave={(m) => {
             const next = [...members];
@@ -324,29 +375,32 @@ export function Profile({
           }}
         />
       )}
+      {deleting !== null && (
+        <Modal
+          title="Eliminar perfil"
+          onClose={() => !busy && setDeleting(null)}
+        >
+          <p>
+            ¿Eliminar a {members[deleting]?.name} del hogar? Sus movimientos
+            anteriores se conservan. Si tiene una cuenta vinculada, perderá
+            acceso a este hogar.
+          </p>
+          <ErrorText text={error} />
+          <Button busy={busy} onClick={removeMember}>
+            Sí, eliminar perfil
+          </Button>
+          <Button
+            className="secondary"
+            disabled={busy}
+            onClick={() => setDeleting(null)}
+          >
+            Cancelar
+          </Button>
+        </Modal>
+      )}
       {section && (
         <Modal title={section} onClose={() => setSection("")}>
-          {["Estudios", "Trabajo e ingresos"].includes(section) ? (
-            <>
-              <p>Selecciona una persona para editar su perfil.</p>
-              {members.map((m, i) => (
-                <button
-                  key={i}
-                  className="profile-row card"
-                  onClick={() => {
-                    setSection("");
-                    setEditing(i);
-                  }}
-                >
-                  <strong>{m.name}</strong>
-                  <small>
-                    {section === "Estudios" ? m.education : m.occupation}
-                  </small>
-                  <ChevronRight />
-                </button>
-              ))}
-            </>
-          ) : section === "Estilo de vida" ? (
+          {section === "Estilo de vida" ? (
             <Field label="Así es nuestro día a día">
               <textarea
                 maxLength={400}

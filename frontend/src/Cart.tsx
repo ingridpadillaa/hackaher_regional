@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { NearbyStores } from "./NearbyStores";
 import {
   Search,
   ShoppingCart,
@@ -268,6 +269,9 @@ export function Cart({
           </Button>
         )}
       </section>
+      <NearbyStores
+        municipality={state.home?.preferences?.municipality ?? ""}
+      />
       <div className="section-heading comparison-title">
         <BarChart3 className="pink" />
         <div>

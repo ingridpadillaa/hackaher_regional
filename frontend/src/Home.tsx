@@ -167,7 +167,7 @@ export function Home({
           </div>
           <div>
             <i className="orange" />
-            <span>Presupuesto</span>
+            <span>Ingreso del hogar</span>
             <strong>{money(summary.budget)}</strong>
             <b>100%</b>
           </div>

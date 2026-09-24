@@ -29,6 +29,7 @@ import { Home } from "./Home";
 import { Cart } from "./Cart";
 import { Simulator } from "./Simulator";
 import { MovementModal } from "./MovementModal";
+import { JamiChat } from "./JamiChat";
 import "./styles.css";
 function App() {
   const [signed, setSigned] = useState(false);
@@ -137,6 +138,9 @@ function App() {
           {(state.user.nombre || "").slice(0, 2).toUpperCase()}
         </NavLink>
       </header>
+      {state.home.esDemo && (
+        <p className="demo-banner">Hogar de demostración · Datos ficticios</p>
+      )}
       {error && (
         <div className="global-error">
           <ErrorText text={error} />
@@ -224,5 +228,6 @@ function App() {
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
     <App />
+    <JamiChat />
   </BrowserRouter>,
 );

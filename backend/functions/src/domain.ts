@@ -30,7 +30,7 @@ export const homeSchema = z.object({
 });
 export const preferencesSchema = z.object({
   municipality: text,
-  monthlyBudget: z.number().positive().max(10000000),
+  monthlyBudget: z.number().min(0).max(1000000000).optional(),
   lifestyle: z.string().max(400),
   priorities: z.array(z.string().max(80)).max(8),
   assistantTone: z.enum(["cercano", "directo", "motivador"]),

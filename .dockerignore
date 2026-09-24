@@ -22,3 +22,5 @@ service-account*.json
 **/*.tsbuildinfo
 **/.secret.local
 **/.ruff_cache
+
+**/.demo-hack-access.local

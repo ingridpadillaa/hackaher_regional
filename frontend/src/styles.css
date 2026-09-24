@@ -103,7 +103,8 @@ textarea {
 }
 input::placeholder,
 textarea::placeholder {
-  color: #9c99a1;
+  color: #85818a;
+  opacity: 1;
 }
 input[type="checkbox"] {
   accent-color: var(--pink);
@@ -716,10 +717,10 @@ form {
   transform: translateX(14px);
 }
 .check-line {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
   gap: 8px;
-  flex-wrap: wrap;
   font-size: 12px;
   color: #6d6270;
   line-height: 1.5;
@@ -728,6 +729,7 @@ form {
 .check-line input {
   width: 18px;
   height: 18px;
+  margin: 0;
 }
 .check-line a {
   color: var(--pink);
@@ -1838,4 +1840,154 @@ form {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Keep numeric fields editable without stepper arrows. */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.check-line > span {
+  min-width: 0;
+}
+.profile-income {
+  display: grid;
+  gap: 8px;
+}
+.profile-income > strong {
+  font-size: 28px;
+}
+
+.nearby-stores {
+  display: grid;
+  gap: 12px;
+}
+.nearby-stores h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nearby-stores a {
+  text-decoration: none;
+}
+
+.danger-text {
+  color: #b42338;
+}
+.demo-banner {
+  margin: 0;
+  padding: 8px 16px;
+  background: #fff1cd;
+  color: #694400;
+  text-align: center;
+  font-size: 12px;
+}
+.jami-bubble {
+  position: fixed;
+  right: max(16px, calc((100vw - 640px) / 2 + 16px));
+  bottom: calc(94px + env(safe-area-inset-bottom));
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff;
+  border: 2px solid var(--pink);
+  border-radius: 999px;
+  padding: 5px 13px 5px 5px;
+  box-shadow: 0 4px 20px #3f163330;
+  font-weight: 800;
+}
+.jami-bubble .jami {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+.jami-chat {
+  position: fixed;
+  z-index: 91;
+  bottom: calc(156px + env(safe-area-inset-bottom));
+  right: max(12px, calc((100vw - 640px) / 2 + 12px));
+  width: min(390px, calc(100vw - 24px));
+  max-height: calc(100dvh - 180px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: #fffdfa;
+  box-shadow: 0 8px 40px #3f163333;
+  overflow: hidden;
+}
+.jami-chat header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fff0f3;
+}
+.jami-chat header strong {
+  flex: 1;
+}
+.jami-chat-log {
+  min-height: 100px;
+  overflow-y: auto;
+  padding: 12px;
+}
+.chat-message {
+  margin: 0 16px 12px 0;
+  padding: 10px;
+  background: #f8edf2;
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+}
+.chat-message.user {
+  margin: 0 0 12px 16px;
+  background: #edf1f8;
+}
+.chat-message p {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+.chat-message small {
+  font-size: 11px;
+}
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+}
+.chat-suggestions button {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  font-size: 11px;
+}
+.jami-chat form {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 8px;
+}
+.chat-privacy {
+  padding: 0 12px 12px;
+  font-size: 10px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.profile-members button {
+  max-width: 100px;
 }

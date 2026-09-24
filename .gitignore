@@ -50,3 +50,6 @@ ui-debug.log
 !/backend/functions/tsconfig.json
 
 .ruff_cache/
+
+# Private demonstration account access
+backend/.demo-hack-access.local

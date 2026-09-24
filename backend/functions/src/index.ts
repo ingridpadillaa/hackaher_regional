@@ -1,9 +1,10 @@
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { defineJsonSecret } from "firebase-functions/params";
 import { bankSession, syncBank, type IntegrationSecrets } from "./banking";
+import { replyToChat } from "./jami";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
@@ -115,10 +116,7 @@ async function bootstrap(uid: string, name: string, email: string) {
   );
   const visible = (list: any[]) =>
     list.filter((m) => !m.private || m.ownerUid === uid);
-  const summary = summarize(
-    visible(movements),
-    data.preferences?.monthlyBudget ?? monthlyIncome(members),
-  );
+  const summary = summarize(visible(movements), monthlyIncome(members));
   const forecast = seasonalForecast(date, visible(forecastHistory));
   const alerts: any[] = [];
   if (data.preferences?.alerts !== false) {
@@ -331,6 +329,12 @@ async function handle(
 ): Promise<any> {
   if (action === "bootstrap")
     return bootstrap(uid, token.name ?? "", token.email ?? "");
+  if (action === "chat") {
+    const message = z.string().trim().min(1).max(2000).parse(p.message);
+    await rateLimit(uid, "jami", 10);
+    const state = await bootstrap(uid, token.name ?? "", token.email ?? "");
+    return replyToChat(message, state, integrations.value());
+  }
   if (action === "createHome") {
     const parsed = homeSchema.parse(p);
     const ref = db.doc(`usuarios/${uid}`);
@@ -416,8 +420,53 @@ async function handle(
   }
   if (action === "analyze") return analyze(uid, p);
   const { home, data, user } = await context(uid);
+  if (action === "deleteMember") {
+    const memberId = id.parse(p.memberId);
+    if (data.ownerUid !== uid)
+      throw new HttpsError(
+        "permission-denied",
+        "Solo quien administra el hogar puede eliminar perfiles.",
+      );
+    if (memberId === data.ownerUid)
+      throw new HttpsError(
+        "failed-precondition",
+        "El perfil administrador debe permanecer en el hogar.",
+      );
+    await db.runTransaction(async (t) => {
+      const memberRef = home.collection("members").doc(memberId);
+      const allMembers = await t.get(home.collection("members"));
+      const member = allMembers.docs.find((doc) => doc.id === memberId);
+      if (!member) throw new HttpsError("not-found", "El perfil ya no existe.");
+      const accountUid = member.data().accountUid;
+      const userRef = accountUid
+        ? db.doc(`usuarios/${id.parse(accountUid)}`)
+        : null;
+      const linked = userRef ? await t.get(userRef) : null;
+      t.delete(memberRef);
+      if (linked?.data()?.hogarId === home.id)
+        t.update(userRef!, {
+          hogarId: FieldValue.delete(),
+          rol: FieldValue.delete(),
+          personalizacionCompleta: false,
+        });
+      t.update(home, {
+        monthlyIncome: monthlyIncome(
+          allMembers.docs.filter((d) => d.id !== memberId).map((d) => d.data()),
+        ),
+      });
+    });
+    return { ok: true };
+  }
   if (action === "savePreferences") {
-    const parsed = preferencesSchema.parse(p);
+    const locked = data.personalized
+      ? {
+          municipality: data.preferences.municipality,
+          privacyAccepted: data.preferences.privacyAccepted,
+          aiConsent: data.preferences.aiConsent,
+          bankConsent: data.preferences.bankConsent,
+        }
+      : {};
+    const parsed = preferencesSchema.parse({ ...p, ...locked });
     if (data.ownerUid !== uid)
       throw new HttpsError(
         "permission-denied",
@@ -437,7 +486,7 @@ async function handle(
       });
     }
     batch.update(home, {
-      preferences,
+      preferences: { ...preferences, monthlyBudget: monthlyIncome(members) },
       monthlyIncome: monthlyIncome(members),
       personalized: true,
     });

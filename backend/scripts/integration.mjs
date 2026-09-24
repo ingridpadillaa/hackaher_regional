@@ -55,7 +55,6 @@ await assert.rejects(
 );
 await api(a, "savePreferences", {
   municipality: "Test municipality",
-  monthlyBudget: 10000,
   lifestyle: "",
   priorities: [],
   assistantTone: "cercano",
@@ -69,6 +68,43 @@ await api(a, "savePreferences", {
 });
 s = await api(a, "bootstrap");
 assert.equal(s.user.personalizacionCompleta, true);
+assert.equal(s.summary.budget, 15000);
+assert.equal(s.home.preferences.monthlyBudget, 15000);
+const recordedPreferences = { ...s.home.preferences };
+await api(a, "savePreferences", {
+  ...recordedPreferences,
+  municipality: "Changed",
+  aiConsent: true,
+  bankConsent: true,
+  members: s.home.members,
+});
+s = await api(a, "bootstrap");
+assert.equal(s.home.preferences.municipality, recordedPreferences.municipality);
+assert.equal(s.home.preferences.aiConsent, false);
+assert.equal(s.home.preferences.bankConsent, false);
+const reply = await api(a, "chat", { message: "¿Cómo van mis gastos?" });
+assert.equal(reply.mode, "datos");
+assert.match(reply.reply, /15,000/);
+await assert.rejects(() => api(a, "deleteMember", { memberId: a.localId }), {
+  status: "FAILED_PRECONDITION",
+});
+await api(a, "savePreferences", {
+  ...s.home.preferences,
+  members: [
+    ...s.home.members,
+    { ...member, name: "Removable test profile", income: 500 },
+  ],
+});
+s = await api(a, "bootstrap");
+const removable = s.home.members.find(
+  (m) => m.name === "Removable test profile",
+);
+assert.ok(removable);
+await api(a, "deleteMember", { memberId: removable.id });
+s = await api(a, "bootstrap");
+assert.equal(s.home.members.length, 1);
+assert.equal(s.summary.budget, 15000);
+
 assert.equal(s.bank.streak, 0);
 assert.equal(s.movements.length, 0);
 const movement = {
@@ -92,6 +128,10 @@ await api(b, "bootstrap");
 await api(b, "createHome", { name: "Separate home", members: [member] });
 let other = await api(b, "bootstrap");
 assert.equal(other.movements.length, 0);
+await assert.rejects(() => api(b, "deleteMember", { memberId: a.localId }), {
+  status: "NOT_FOUND",
+});
+
 await assert.rejects(
   () => api(b, "saveGoal", { id: s.goals[0].id, name: "Attack", target: 1 }),
   { status: "FAILED_PRECONDITION" },
@@ -118,6 +158,24 @@ await assert.rejects(
   () => api(a, "analyze", { method: "audio", text: "test" }),
   { status: "FAILED_PRECONDITION" },
 );
+const c = await signup();
+s = await api(a, "bootstrap");
+await api(c, "bootstrap");
+await api(c, "joinHome", { code: s.home.invitationCode });
+await api(c, "completeMemberProfile", { privacyAccepted: true });
+await assert.rejects(() => api(c, "deleteMember", { memberId: a.localId }), {
+  status: "PERMISSION_DENIED",
+});
+await api(c, "saveMovement", {
+  ...movement,
+  requestId: crypto.randomUUID(),
+  note: "Keep after member removal",
+});
+await api(a, "deleteMember", { memberId: c.localId });
+const detached = await api(c, "bootstrap");
+assert.equal(detached.home, null);
+s = await api(a, "bootstrap");
+assert.ok(s.movements.some((m) => m.note === "Keep after member removal"));
 const raw = await fetch(
   `http://127.0.0.1:8085/v1/projects/${project}/databases/(default)/documents/hogares/${s.home.id}`,
   { headers: { Authorization: `Bearer ${a.idToken}` } },
