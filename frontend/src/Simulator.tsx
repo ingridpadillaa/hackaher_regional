@@ -9,7 +9,7 @@ import {
   Landmark,
 } from "lucide-react";
 import { type State, type Goal, money, dateLabel } from "./types";
-import { Logo, Jami, Button, Field, Modal, ErrorText, Empty } from "./ui";
+import { Jami, Button, Field, Modal, ErrorText, Empty } from "./ui";
 import { call, errorMessage } from "./firebase";
 export function Simulator({
   state,
@@ -78,7 +78,6 @@ export function Simulator({
 
   return (
     <main className="page simulator-page">
-      <Logo />
       <div className="jami-message">
         <Jami kind="ahorro" />
         <div className="speech">

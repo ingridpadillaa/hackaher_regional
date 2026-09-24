@@ -1867,14 +1867,6 @@ input[type="number"]::-webkit-outer-spin-button {
 .danger-text {
   color: #b42338;
 }
-.demo-banner {
-  margin: 0;
-  padding: 8px 16px;
-  background: #fff1cd;
-  color: #694400;
-  text-align: center;
-  font-size: 12px;
-}
 .jami-bubble {
   position: fixed;
   right: max(16px, calc((100vw - 640px) / 2 + 16px));

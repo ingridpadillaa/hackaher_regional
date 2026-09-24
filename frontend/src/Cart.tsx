@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { type State, type CartItem, money } from "./types";
-import { Logo, Jami, Button, Empty, ErrorText, Modal, Field } from "./ui";
+import { Jami, Button, Empty, ErrorText, Modal, Field } from "./ui";
 import { call, errorMessage } from "./firebase";
 export function Cart({
   state,
@@ -143,7 +143,6 @@ export function Cart({
   const count = items.filter((i) => i.selected).length;
   return (
     <main className="page cart-page">
-      <Logo />
       <header className="center-title">
         <h1>
           Creación <em>óptima de gasto</em>

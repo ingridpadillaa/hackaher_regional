@@ -91,7 +91,6 @@ function App() {
   if (loading)
     return (
       <div className="loading">
-        <Logo />
         <span className="spinner" />
         <p>Preparando tu hogar…</p>
       </div>
@@ -149,9 +148,6 @@ function App() {
           {(state.user.nombre || "").slice(0, 2).toUpperCase()}
         </NavLink>
       </header>
-      {state.home.esDemo && (
-        <p className="demo-banner">Hogar de demostración · Datos ficticios</p>
-      )}
       {error && (
         <div className="global-error">
           <ErrorText text={error} />

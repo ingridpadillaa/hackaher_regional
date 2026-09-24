@@ -22,7 +22,7 @@ import {
 export function Logo({ small = false }: { small?: boolean }) {
   return (
     <img
-      src="/images/summa-logo.png"
+      src="/images/summa-logo-header.png"
       alt="Summa"
       className={small ? "logo small" : "logo"}
     />

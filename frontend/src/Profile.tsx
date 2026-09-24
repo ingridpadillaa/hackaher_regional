@@ -135,7 +135,7 @@ export function Profile({
   }
   return (
     <main className="page profile-page">
-      <Logo />
+      {initial && <Logo />}
       {initial && <span className="step-label">2 DE 2 · PERSONALIZACIÓN</span>}
       <header className="intro">
         <h1>
