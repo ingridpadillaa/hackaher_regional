@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="login-grid">
+        <div class="hero intro">
+            <span class="eyebrow">EL COPILOTO DE TU HOGAR</span>
+            <h1>
+                Empieza gratis.
+                <br>
+                Con ayuda de Jami,
+                <br>
+                cuida tu hogar.
+            </h1>
+            <p>
+                Tu dinero, tus planes y los de tu familia.
+                <br>
+                Todo encuentra su lugar.
+            </p>
+            <div class="pig-art" aria-hidden="true">
+                ◕<span>✦</span>
+            </div>
+            <span class="badge">Funciona también con efectivo</span>
+        </div>
+        <section class="card">
+            <span class="eyebrow">HOLA, QUÉ GUSTO VERTE</span>
+            <h2>
+                Hagamos espacio
+                <br>
+                para tus planes.
+            </h2>
+            {% if local_mode %}
+                <p>Desarrollo local · Tu cuenta comienza vacía.</p>
+                <form method="post" action="/auth/demo">
+                    <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                    <label>Tu nombre<input name="name" required maxlength="80" autocomplete="given-name"></label>
+                    <button>Crear mi hogar</button>
+                </form>
+            {% else %}
+                <form id="firebase-login">
+                    <label>
+                        Correo electrónico<input type="email" id="email" autocomplete="email" required>
+                    </label>
+                    <label>
+                        Contraseña<input type="password"
+       id="password"
+       minlength="8"
+       autocomplete="current-password"
+       required>
+                    </label>
+                    <button>Iniciar sesión</button>
+                    <button type="button" id="register" class="secondary">Crear cuenta</button>
+                    <button type="button" id="google" class="secondary">Continuar con Google</button>
+                </form>
+                <p id="auth-error" role="alert"></p>
+            {% endif %}
+            <p class="muted">
+                Conectar tu banco es opcional.
+                <br>
+                Tú eliges cómo llevar tus cuentas.
+            </p>
+        </section>
+    </section>
+{% endblock %}
+{% block scripts %}
+    {% if not local_mode %}
+        <script type="module" src="/static/auth.js"></script>
+        <script type="application/json" id="firebase-config">{{ firebase_config|tojson }}</script>
+    {% endif %}
+{% endblock %}

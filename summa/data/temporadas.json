@@ -1,0 +1,90 @@
+{
+  "entries": [
+    [
+      "Día de Reyes",
+      1,
+      6,
+      900
+    ],
+    [
+      "Cuesta de enero",
+      1,
+      15,
+      1300
+    ],
+    [
+      "Predial",
+      1,
+      31,
+      1200
+    ],
+    [
+      "San Valentín",
+      2,
+      14,
+      500
+    ],
+    [
+      "Día del Niño",
+      4,
+      30,
+      600
+    ],
+    [
+      "Día de las Madres",
+      5,
+      10,
+      800
+    ],
+    [
+      "Vacaciones de verano",
+      7,
+      15,
+      2500
+    ],
+    [
+      "Regreso a clases",
+      8,
+      20,
+      2400
+    ],
+    [
+      "Fiestas Patrias",
+      9,
+      16,
+      700
+    ],
+    [
+      "Día de Muertos",
+      11,
+      2,
+      650
+    ],
+    [
+      "Buen Fin",
+      11,
+      15,
+      1800
+    ],
+    [
+      "Aguinaldo",
+      12,
+      15,
+      0
+    ],
+    [
+      "Posadas",
+      12,
+      18,
+      900
+    ],
+    [
+      "Navidad",
+      12,
+      25,
+      2500
+    ]
+  ],
+  "reference_income": 24000,
+  "easter_amount": 2000
+}

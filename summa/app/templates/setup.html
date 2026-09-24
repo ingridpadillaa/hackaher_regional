@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section class="card"><h1>Configura Summa</h1><p>La aplicación necesita estas conexiones para comenzar.</p><ul>{% for issue in health.issues %}<li>{{ issue }}</li>{% endfor %}</ul><p>Para desarrollo sin Firebase, activa explícitamente LOCAL_MODE=true. Las cuentas locales empiezan vacías.</p></section>{% endblock %}

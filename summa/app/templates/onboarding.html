@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="card form-card" x-data="{step:1}">
+        <span class="eyebrow">BIENVENIDA A SUMMA</span>
+        <h1>Tu hogar, tus reglas.</h1>
+        <div class="progress">
+            <span :style="'width:'+step*20+'%'"></span>
+        </div>
+        <p class="subtle">
+            Paso <span x-text="step"></span> de 5
+        </p>
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+            <div x-show="step===1">
+                <h2>Hagamos equipo</h2>
+                <label>
+                    Nombre de tu hogar<input name="name"  maxlength="80">
+                </label>
+                <label>
+                    Ciudad<input name="city" >
+                </label>
+                <label>
+                    Estado<input name="state" >
+                </label>
+                <label>
+                    ¿Ya te invitaron? Escribe el código<input name="code" placeholder="Opcional" maxlength="16">
+                </label>
+            </div>
+            <div x-show="step===2">
+                <h2>Tu próxima quincena</h2>
+                <label>
+                    Ingreso por periodo<input name="income" type="number" min="1" step=".01" >
+                </label>
+                <label>
+                    ¿Cada cuándo recibes ingresos?<select name="periodicity">
+                    <option value="quincenal">Cada quincena</option>
+                    <option value="semanal">Cada semana</option>
+                    <option value="mensual">Cada mes</option>
+                    </select>
+                </label>
+                <label>
+                    Próximo ingreso<input type="date" name="next_date" value="{{ next_date }}">
+                </label>
+                <label>
+                    <input type="checkbox" name="variable">Mi ingreso cambia cada periodo
+                </label>
+            </div>
+            <div x-show="step===3">
+                <h2>Lo que no puede faltar</h2>
+                <p>Marca tus pagos habituales. Después podrás agregar sus montos.</p>
+                {% for name in ['Luz','Agua','Gas','Internet','Celular','Renta','Colegiatura','Suscripciones'] %}
+                    <label>
+                        <input type="checkbox" name="payments" value="{{ name }}">{{ name }}
+                    </label>
+                {% endfor %}
+            </div>
+            <div x-show="step===4">
+                <h2>A tu ritmo</h2>
+                <p>Puedes registrar efectivo, tickets y estados de cuenta. Conecta tu banco desde Perfil cuando estés lista.</p>
+                <button type="button" @click="step=5">Ahora no →</button>
+            </div>
+            <div x-show="step===5">
+                <h2>Tú tienes el control</h2>
+                <label>
+                    <input type="checkbox" name="privacy" value="1">Acepto el <a href="/privacidad"
+    target="_blank"
+    style="text-decoration:underline">aviso de privacidad</a>
+                </label>
+                <label>
+                    <input type="checkbox"
+                           name="ai_consent"
+                           value="1">Permito usar datos mínimos para analizar documentos con IA (opcional)
+                </label>
+                <button>Empezar mi hogar →</button>
+            </div>
+            <div class="row" style="margin-top:22px">
+                <button type="button" class="secondary" x-show="step>1" @click="step--">Atrás</button>
+                <button type="button" x-show="step<4" @click="step++">Continuar →</button>
+            </div>
+        </form>
+    </section>
+{% endblock %}

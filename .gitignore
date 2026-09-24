@@ -8,3 +8,7 @@ instance/
 .DS_Store
 service-account*.json
 cochinito/app/connectors/fixtures/recorded/
+
+*.db
+*service-account*.json
+*credentials*.json
