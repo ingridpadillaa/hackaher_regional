@@ -137,12 +137,9 @@ export function LocationPicker({
     <section className="location-picker">
       <p className="helper">
         {temporary
-          ? "La ubicación para esta compra es temporal y no cambia tu hogar."
-          : "La zona se guardará con el hogar al confirmar. No necesitamos tu domicilio exacto."}{" "}
-        Al usar tu ubicación, Summa consulta OpenStreetMap para completar
-        municipio y estado. Si el dispositivo no responde, usa una zona
-        aproximada basada en tu conexión. Al abrir el mapa compartirás ese punto
-        con Google Maps.
+          ? "La ubicación para esta compra es temporal y no cambia tu hogar. Al usar tu ubicación, Summa consulta OpenStreetMap para completar municipio y estado. Si el dispositivo no responde, usa una zona aproximada basada en tu conexión."
+          : "Edita el municipio y estado donde vive tu hogar. Esta ubicación fija se guardará al confirmar; no cambia cuando te desplazas. No necesitamos tu domicilio exacto."}{" "}
+        Al abrir el mapa compartirás la zona seleccionada con Google Maps.
       </p>
       {!temporary && (
         <div className="form-grid">
@@ -181,22 +178,24 @@ export function LocationPicker({
           </Field>
         </div>
       )}
-      <Button
-        type="button"
-        className="secondary"
-        disabled={disabled || busy}
-        onClick={locate}
-      >
-        {busy
-          ? "Obteniendo ubicación…"
-          : coordinates
-            ? "Actualizar mi ubicación"
-            : "Usar mi ubicación"}
-      </Button>
+      {temporary && (
+        <Button
+          type="button"
+          className="secondary"
+          disabled={disabled || busy}
+          onClick={locate}
+        >
+          {busy
+            ? "Obteniendo ubicación…"
+            : coordinates
+              ? "Actualizar mi ubicación"
+              : "Usar mi ubicación"}
+        </Button>
+      )}
       {coordinates && (
         <>
           <small>
-            Zona detectada:{" "}
+            {temporary ? "Zona detectada:" : "Zona guardada:"}{" "}
             <strong>
               {value.municipality}, {value.state}
             </strong>
@@ -232,14 +231,16 @@ export function LocationPicker({
           Ver zona en Google Maps ↗
         </a>
       )}
-      <a
-        className="text-button"
-        href="https://www.openstreetmap.org/copyright"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Datos de ubicación © colaboradores de OpenStreetMap
-      </a>
+      {temporary && (
+        <a
+          className="text-button"
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Datos de ubicación © colaboradores de OpenStreetMap
+        </a>
+      )}
       {status && (
         <p className="success" role="status">
           {status}
