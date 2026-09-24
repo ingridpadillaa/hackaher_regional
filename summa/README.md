@@ -19,3 +19,5 @@ Auditoría de datos retirados: `docs/AUDITORIA_DATOS.md`.
 
 ## Verificación
 `python -m pytest -q`. Las pruebas usan una base temporal y fixtures aislados; nunca la base real.
+
+Proveedor alternativo opcional: instala `openai`, configura `LLM_PROVIDER=openai`, `OPENAI_API_KEY` y `OPENAI_MODEL` compatible con visión y Structured Outputs. Extracción mediante Responses parse con Pydantic y store=false; referencia: https://developers.openai.com/api/docs/guides/structured-outputs . El chat con function calling utiliza Gemini.

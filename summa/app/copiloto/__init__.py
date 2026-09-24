@@ -54,6 +54,32 @@ def gemini_calls(message):
         "lista_mandado": {"presupuesto": {"type": "NUMBER"}},
         "proxima_temporada": {},
     }
+    specs.update(
+        {
+            name: {}
+            for name in (
+                "resumen_periodo",
+                "presupuesto_vs_real",
+                "estado_meta",
+                "estado_racha",
+                "comparar_carrito",
+                "sugerencias_mandado",
+            )
+        }
+    )
+    specs["navegar"] = {
+        "ruta": {
+            "type": "STRING",
+            "enum": [
+                "/",
+                "/movimientos",
+                "/mandado",
+                "/movimientos/reportes",
+                "/perfil/personalizacion",
+                "/calendario",
+            ],
+        }
+    }
     declarations = [
         types.FunctionDeclaration(
             name=name,
@@ -101,30 +127,56 @@ def chat():
         shopping=shopping_data(g.hogar_id),
         school="clases" in normalize(message),
     )
-    calls = choose_tools(message)
-    mode = "local"
-    if os.getenv("GEMINI_API_KEY") and g.user.get("consentimientos", {}).get("iaDatos"):
-        try:
-            calls = gemini_calls(message) or calls
-            mode = "gemini"
-        except Exception:
-            mode = "local"
+    context["goal"] = repo().get(base + "/metas/motivacion")
+    context["streak"] = repo().get(base + "/racha/estado")
+    if any(word in normalize(message) for word in ("llevame", "abrir", "ir a", "ver mi")):
+        destinations = {
+            "mandado": "/mandado",
+            "reporte": "/movimientos/reportes",
+            "movimiento": "/movimientos",
+            "perfil": "/perfil/personalizacion",
+            "calendario": "/calendario",
+            "inicio": "/",
+        }
+        route = next((route for word, route in destinations.items() if word in normalize(message)), None)
+        if route:
+            return {
+                "answer": "Abre la pantalla con este botón.",
+                "mode": "navegacion",
+                "tools": ["navegar"],
+                "actions": [{"ruta": route, "label": "Abrir pantalla"}],
+            }
+    unavailable = {
+        "answer": "Jami no está disponible en este momento. Puedes consultar tus cifras en Inicio y Reportes o registrar un gasto manual.",
+        "mode": "unavailable",
+        "tools": [],
+    }
+    if not os.getenv("GEMINI_API_KEY") or not g.user.get("consentimientos", {}).get("iaDatos"):
+        return unavailable
+    try:
+        calls = gemini_calls(message)
+        mode = "gemini"
+    except Exception:
+        return unavailable
     if not calls:
         return {
             "answer": "Para comparar el préstamo necesito el monto que recibirías, cuánto pagarías cada vez, la periodicidad y el número de pagos. También considera comisiones y seguros.",
             "mode": mode,
             "tools": [],
         }
+    actions = []
     facts = []
     used = []
     for name, args in calls:
         try:
             result = execute(name, args, context)
             facts.append(render_fact(name, result))
+            if name == "navegar":
+                actions.append({"ruta": result["ruta"], "label": "Abrir pantalla"})
             used.append(name)
         except ValueError:
             facts.append("Faltan datos válidos para ese cálculo.")
-    return {"answer": "\n\n".join(facts), "mode": mode, "tools": used}
+    return {"answer": "\n\n".join(facts), "mode": mode, "tools": used, "actions": actions}
 
 
 @bp.post("/simular")

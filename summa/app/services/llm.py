@@ -54,7 +54,43 @@ class GeminiClient:
         raise ExtractionUnavailable("No pudimos leerlo con confianza. Intenta otra vez o usa captura manual.")
 
 
+class OpenAIClient:
+    def extract(self, prompt, schema, media=None, mime=None):
+        if not os.getenv("OPENAI_API_KEY") or not os.getenv("OPENAI_MODEL"):
+            raise ExtractionUnavailable("Jami no está disponible en este momento. Puedes capturar a mano.")
+        try:
+            from openai import OpenAI
+        except ImportError as error:
+            raise ExtractionUnavailable("Instala el proveedor opcional OpenAI o utiliza Gemini.") from error
+        import base64
+
+        content = [{"type": "input_text", "text": redact(prompt)}]
+        if media:
+            content.append(
+                {
+                    "type": "input_image",
+                    "image_url": f"data:{mime};base64," + base64.b64encode(media).decode(),
+                }
+            )
+        client = OpenAI(timeout=8, max_retries=0)
+        for _ in range(2):
+            try:
+                response = client.responses.parse(
+                    model=os.environ["OPENAI_MODEL"],
+                    input=[{"role": "user", "content": content}],
+                    text_format=schema,
+                    store=False,
+                )
+                if response.output_parsed is not None:
+                    return response.output_parsed
+            except Exception:
+                continue
+        raise ExtractionUnavailable("Jami no está disponible en este momento. Puedes capturar a mano.")
+
+
 def get_llm():
+    if os.getenv("LLM_PROVIDER") == "openai":
+        return OpenAIClient()
     if os.getenv("LLM_PROVIDER", "gemini") != "gemini":
         raise ExtractionUnavailable("Proveedor de IA no configurado; usa captura manual.")
     return GeminiClient()

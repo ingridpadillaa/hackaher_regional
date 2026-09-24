@@ -20,10 +20,18 @@ class ToolArgs(BaseModel):
     pago: float = Field(default=0, ge=0, le=100000000, allow_inf_nan=False)
     periodicidad: Literal["semanal", "quincenal", "mensual"] = "mensual"
     numero_pagos: int = Field(default=1, ge=1, le=10000)
+    ruta: str = Field(default="/", max_length=100)
     presupuesto: float | None = Field(default=None, ge=0, le=100000000, allow_inf_nan=False)
 
 
 TOOL_NAMES = [
+    "resumen_periodo",
+    "presupuesto_vs_real",
+    "estado_meta",
+    "estado_racha",
+    "comparar_carrito",
+    "sugerencias_mandado",
+    "navegar",
     "obtener_resumen",
     "gastos_por_categoria",
     "hoy_puedo_gastar",
@@ -36,7 +44,35 @@ TOOL_NAMES = [
 
 
 def execute(name, raw_args, context):
+    name = {"resumen_periodo": "obtener_resumen", "comparar_carrito": "lista_mandado"}.get(name, name)
     args = ToolArgs.model_validate(raw_args)
+    if name == "navegar":
+        from app.services.notifications import ALLOWED_ROUTES
+
+        if args.ruta not in ALLOWED_ROUTES:
+            raise ValueError("Ruta no permitida")
+        return {"ruta": args.ruta}
+    if name in ("estado_meta", "estado_racha", "sugerencias_mandado", "presupuesto_vs_real"):
+        from app.services.planning import build_plan, history_days
+
+        if name == "estado_meta":
+            return context.get("goal") or {"sinDatos": True}
+        if name == "estado_racha":
+            return context.get("streak") or {"sinDatos": True}
+        if name == "sugerencias_mandado":
+            return {"productos": context["shopping"]["predictions"]}
+        if history_days(context["movements"]) < 7:
+            return {"sinDatos": True}
+        plan = build_plan(context["household"], context["payments"], context["movements"])
+        return {
+            "presupuesto": plan["porCategoria"],
+            "real": summarize(
+                context["movements"],
+                local_today().replace(day=1).isoformat(),
+                (local_today() + timedelta(days=1)).isoformat(),
+            )["categories"],
+        }
+
     household, movements, payments = context["household"], context["movements"], context["payments"]
     days = {"semana": 7, "quincena": 15, "mes": 30}[args.periodo]
     end = local_today() + timedelta(days=1)
@@ -105,9 +141,34 @@ def execute(name, raw_args, context):
 
 
 def render_fact(name, result):
+    name = {"resumen_periodo": "obtener_resumen", "comparar_carrito": "lista_mandado"}.get(name, name)
+    if result.get("sinDatos"):
+        return "Aún no hay suficientes datos. Completa tu personalización y registra tus gastos."
+    if name == "navegar":
+        return "Puedes abrir esta pantalla con el botón."
+    if name == "estado_meta":
+        return (
+            f"Llevas ${result.get('ahorrado', 0):,.2f} de ${result.get('montoObjetivo', 0):,.2f} en tu meta."
+        )
+    if name == "estado_racha":
+        return f"Tu racha actual es de {result.get('diasActuales', 0)} días."
+    if name == "sugerencias_mandado":
+        return (
+            "Revisa las sugerencias basadas en tus compras en Mandado."
+            if result["productos"]
+            else "Necesitamos dos compras del mismo producto para estimar su reposición."
+        )
+    if name == "presupuesto_vs_real":
+        return "\n".join(
+            f"{c}: ${result['real'].get(c, 0):,.2f} de ${v:,.2f} sugeridos."
+            for c, v in result["presupuesto"].items()
+        )
+
     def money(value):
         return f"${value:,.2f}"
 
+    if name == "hoy_puedo_gastar" and not result.get("has_income", True):
+        return "Completa tus ingresos en Personalización para calcular tu disponible."
     if name == "hoy_puedo_gastar":
         return f"Hoy puedes gastar {money(result['daily'])}. Quedan {result['days']} días para tu próximo ingreso. Disponible del periodo: {money(result['available'])}. Es una estimación con tus registros visibles."
     if name == "obtener_resumen":

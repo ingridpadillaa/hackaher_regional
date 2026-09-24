@@ -18,7 +18,7 @@
         <script defer src="/static/app.js"></script>
         {% block head %}{% endblock %}
     </head>
-    <body>
+    <body data-user="{{ g.user.uid if g.user else '' }}">
         <div class="shell">
             <header>
                 <a class="brand" href="/">◕ <span>summa</span>
@@ -48,7 +48,7 @@
                 </nav>
                 <button class="copilot-launch"
                         aria-label="Abrir Jami"
-                        onclick="document.getElementById('copilot').showModal()">✦</button>
+                        onclick="document.getElementById('copilot').showModal()"><img src="/static/img/jami-avatar.png" width="44" height="44" alt="Jami"></button>
                 <dialog id="copilot">
                     <div class="row">
                         <h2>Jami</h2>
