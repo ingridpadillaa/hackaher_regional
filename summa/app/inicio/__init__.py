@@ -20,6 +20,10 @@ def index():
     from app.services.planning import refresh_plan
 
     refresh_plan(repo(), g.hogar_id)
+    from app.services.streaks import evaluate, snapshot
+
+    snapshot(repo(), g.hogar_id)
+    evaluate(repo(), g.hogar_id)
     household = repo().get(base)
     movements = visible_movements(g.hogar_id, g.user["uid"])
     payments = repo().list(base + "/pagosFijos")
@@ -235,3 +239,54 @@ def read_notification(notification_id):
     item["leida"] = True
     repo().put(path, item)
     return redirect("/notificaciones")
+
+
+@bp.post("/progreso/cerrar-dia")
+@login_required
+def close_day():
+    from app.services.streaks import snapshot
+
+    snapshot(repo(), g.hogar_id)
+    path = f"hogares/{g.hogar_id}/evidenciaRacha/" + local_today().isoformat()
+    record = repo().get(path)
+    if record:
+        record["confirmado"] = True
+        repo().put(path, record)
+        flash("Confirmaste que tus gastos de hoy están registrados. La racha se evalúa mañana.")
+    return redirect("/")
+
+
+@bp.post("/progreso/aportar")
+@login_required
+def contribute():
+    from app.services.notifications import notify
+    from app.services.personalization import amount
+
+    path = f"hogares/{g.hogar_id}/metas/motivacion"
+    try:
+        value = amount(request.form.get("amount"))
+        if not value:
+            raise ValueError("Indica un aporte mayor a cero.")
+
+        def update(current):
+            goal = current[path]
+            if not goal:
+                raise ValueError("Primero crea una meta.")
+            goal["ahorrado"] = round(goal.get("ahorrado", 0) + value, 2)
+            return {path: goal}, goal
+
+        goal = repo().atomic([path], update)
+        if goal["ahorrado"] >= goal["montoObjetivo"]:
+            notify(
+                repo(),
+                g.hogar_id,
+                "meta",
+                "¡Meta alcanzada!",
+                "Llegaste al monto de tu meta.",
+                "/",
+                key="meta-motivacion-" + goal["fechaObjetivo"],
+            )
+        flash("Aporte registrado. Summa no mueve dinero; anota solo lo que ya apartaste.")
+    except ValueError as error:
+        flash(str(error))
+    return redirect("/")
