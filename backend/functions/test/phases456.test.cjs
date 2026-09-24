@@ -2,7 +2,11 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { reconcileReceipt, ruleKey } = require("../lib/receipts");
 const { compareStores } = require("../lib/catalog");
-const { locationSchema, distanceKm } = require("../lib/location");
+const {
+  locationSchema,
+  distanceKm,
+  locationNames,
+} = require("../lib/location");
 test("receipt split reconciles line totals without double counting the receipt", () => {
   const r = {
     warning: "",
@@ -137,4 +141,18 @@ test("location requires paired valid coordinates; unknown and far locations cann
     ).length,
     0,
   );
+});
+test("reverse location favors the administrative municipality and supports locality fallbacks", () => {
+  assert.deepEqual(
+    locationNames({
+      city: "San Pedro Garza García",
+      municipality: "San Pedro Garza García",
+      state: "Nuevo León",
+    }),
+    { municipality: "San Pedro Garza García", state: "Nuevo León" },
+  );
+  assert.deepEqual(locationNames({ town: "Tulum", state: "Quintana Roo" }), {
+    municipality: "Tulum",
+    state: "Quintana Roo",
+  });
 });

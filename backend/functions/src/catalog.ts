@@ -101,12 +101,11 @@ export function compareStores(
     .slice(0, 4);
 }
 export async function catalogStores(db: any, area: any) {
-  const query =
-    area.latitude !== undefined && area.state
-      ? db.collection("stores").where("stateKey", "==", normalize(area.state))
-      : db
-          .collection("stores")
-          .where("municipalityKey", "==", normalize(area.municipality));
+  // Reverse geocoding always supplies the municipality. Querying the whole
+  // state with a limit could exclude the nearby branches as the catalog grows.
+  const query = db
+    .collection("stores")
+    .where("municipalityKey", "==", normalize(area.municipality));
   const snap = await query.limit(250).get();
   return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 }

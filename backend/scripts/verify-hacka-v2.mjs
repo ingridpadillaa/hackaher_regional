@@ -72,7 +72,21 @@ for (const account of access.accounts) {
   });
   assert.equal(offers.length, 4);
   assert.ok(offers.some((o) => o.matchedCount > 0));
+  const tampicoOffers = await api("compareCart", {
+    items: state.cart,
+    historical: true,
+    area: {
+      municipality: "Tampico",
+      state: "Tamaulipas",
+      latitude: 22.2852,
+      longitude: -97.8778,
+      source: "browser",
+    },
+  });
+  assert.equal(tampicoOffers.length, 4);
+  assert.ok(tampicoOffers.every((o) => o.municipality === "Tampico"));
+  assert.ok(tampicoOffers.every((o) => o.distanceKm <= 20));
 }
 console.log(
-  "PASS: dos cuentas, tres reportes conciliados, metas/racha declarada, agenda y cuatro sucursales reales; sin evidencia bancaria inventada.",
+  "PASS: dos cuentas, tres reportes conciliados, metas/racha declarada, agenda y sucursales PROFECO por ubicación; sin evidencia bancaria inventada.",
 );

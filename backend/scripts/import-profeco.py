@@ -178,5 +178,7 @@ if __name__ == "__main__":
     p.add_argument("--output", required=True)
     a = p.parse_args()
     result = convert(a.file, a.state, a.municipality, a.source_url, a.period)
-    Path(a.output).write_text(json.dumps(result, ensure_ascii=False))
+    Path(a.output).write_text(
+        json.dumps(result, ensure_ascii=False), encoding="utf-8"
+    )
     print({k: len(result[k]) for k in ["products", "stores", "prices"]}, result["metadata"])

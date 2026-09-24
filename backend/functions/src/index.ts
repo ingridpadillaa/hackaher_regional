@@ -17,8 +17,12 @@ import {
 } from "./finance";
 import { compareStores, catalogStores } from "./catalog";
 import { prepareHebCart } from "./retailer-cart";
-import { normalize } from "./location";
-import { locationSchema } from "./location";
+import {
+  coordinatesSchema,
+  locationSchema,
+  normalize,
+  reverseGeocode,
+} from "./location";
 import { ruleKey } from "./receipts";
 import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
@@ -494,6 +498,18 @@ async function handle(
   }
   if (action === "analyze") return analyze(uid, p);
   const { home, data, user } = await context(uid);
+  if (action === "reverseLocation") {
+    await rateLimit(uid, "reverse-location", 5);
+    const coordinates = coordinatesSchema.parse(p);
+    try {
+      return await reverseGeocode(coordinates.latitude, coordinates.longitude);
+    } catch {
+      throw new HttpsError(
+        "unavailable",
+        "Obtuvimos tus coordenadas, pero no pudimos identificar la zona. Confirma municipio y estado manualmente.",
+      );
+    }
+  }
   if (action === "rotateInvitation" || action === "revokeInvitation") {
     if (data.ownerUid !== uid)
       throw new HttpsError(

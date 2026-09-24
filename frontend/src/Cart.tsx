@@ -21,13 +21,11 @@ export function Cart({
   state: State;
   onSaved: () => Promise<void>;
 }) {
-  const [area, setArea] = useState<Area>(
-    state.home?.location ?? {
-      municipality: state.home?.preferences?.municipality ?? "",
-      state: "",
-      source: "manual",
-    },
-  );
+  const [area, setArea] = useState<Area>({
+    municipality: "",
+    state: "",
+    source: "manual",
+  });
   const [historical, setHistorical] = useState(false);
   const [sort, setSort] = useState("price");
   const [items, setItems] = useState<CartItem[]>(state.cart);
@@ -42,11 +40,6 @@ export function Cart({
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const revision = useRef(0);
   const comparisonVersion = useRef(0);
-  function invalidate() {
-    comparisonVersion.current++;
-    setOffers([]);
-    setDirty(true);
-  }
   const [dirty, setDirty] = useState(false);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -72,18 +65,29 @@ export function Cart({
   useEffect(() => {
     let live = true;
     const version = ++comparisonVersion.current;
-    call("compareCart", { items: state.cart, area, historical, sort })
-      .then(
-        (r) => live && version === comparisonVersion.current && setOffers(r),
-      )
-      .catch((e) => live && setError(errorMessage(e)));
+    setOffers([]);
+    if (area.latitude === undefined || area.longitude === undefined) {
+      setError("");
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      call("compareCart", { items, area, historical, sort })
+        .then((r) => {
+          if (live && version === comparisonVersion.current) {
+            setOffers(r);
+            setError("");
+          }
+        })
+        .catch((e) => live && setError(errorMessage(e)));
+    }, 150);
     return () => {
       live = false;
+      window.clearTimeout(timer);
     };
-  }, []);
+  }, [items, area, historical, sort]);
   function update(next: CartItem[]) {
     setItems(next);
-    invalidate();
+    setDirty(true);
   }
   function add(p: any) {
     if (items.some((i) => i.id === p.id)) {
@@ -108,16 +112,11 @@ export function Cart({
     setShowAdd(false);
   }
   async function save() {
-    const version = ++comparisonVersion.current;
     setBusy(true);
     setError("");
     try {
       await call("saveCart", { items });
-      const o = await call("compareCart", { items, area, historical, sort });
-      if (version === comparisonVersion.current) {
-        setOffers(o);
-        setDirty(false);
-      }
+      setDirty(false);
       await onSaved();
     } catch (e) {
       setError(errorMessage(e));
@@ -292,22 +291,9 @@ export function Cart({
       </section>
       <section className="card" aria-label="Supermercados cercanos">
         <h2>Zona para esta compra</h2>
-        <LocationPicker
-          temporary
-          value={area}
-          onChange={(a) => {
-            setArea(a);
-            invalidate();
-          }}
-        />
+        <LocationPicker temporary value={area} onChange={setArea} />
         <Field label="Ordenar sucursales">
-          <select
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value);
-              invalidate();
-            }}
-          >
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
             <option value="price">Precio de la misma lista</option>
             <option value="distance">Cercanía (requiere ubicación)</option>
           </select>
@@ -316,10 +302,7 @@ export function Cart({
           <input
             type="checkbox"
             checked={historical}
-            onChange={(e) => {
-              setHistorical(e.target.checked);
-              invalidate();
-            }}
+            onChange={(e) => setHistorical(e.target.checked)}
           />
           <span>
             Incluir referencias históricas de más de 30 días. No son precios
