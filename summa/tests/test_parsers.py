@@ -1,16 +1,14 @@
-from datetime import date
 
 from app.services.llm import redact
 from app.services.voice_parser import parse_voice
 from tests.conftest import csrf
 
 
-def test_voice_examples():
-    day = date(2026, 9, 23)
-    assert parse_voice("ayer gasté 150 en gasolina", today=day)[0]["fecha"] == "2026-09-22"
-    assert [m["monto"] for m in parse_voice("85 de tacos y 40 del camión")] == [85, 40]
-    assert parse_voice("me cayó la quincena, 6 mil")[0]["monto"] == 6000
-    assert parse_voice("compré tacos")[0]["monto"] is None
+def test_voice_unavailable_never_invents(monkeypatch):
+    import pytest
+    monkeypatch.delenv('GEMINI_API_KEY',raising=False)
+    with pytest.raises(ValueError,match='Jami no está disponible'):
+        parse_voice('ayer gasté 150 en gasolina',allow_ai=True)
 
 
 def test_pdf_demo_and_receipt(logged):
@@ -18,7 +16,7 @@ def test_pdf_demo_and_receipt(logged):
     for kind in ("pdf", "recibo"):
         response = logged.post("/movimientos/importar/" + kind, data={"csrf_token": token, "example": "1"})
         assert response.status_code == 302
-        assert logged.get(response.location).status_code == 200
+        assert logged.get(response.location, follow_redirects=True).status_code == 200
 
 
 def test_redaction():

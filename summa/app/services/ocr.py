@@ -12,6 +12,8 @@ from .llm import get_llm
 class Product(BaseModel):
     nombre_original: str = Field(max_length=120)
     nombre_normalizado: str = Field(max_length=120)
+    marca: str | None = None
+    presentacion: str | None = None
     cantidad: float = Field(gt=0, le=10000)
     precio_unitario: float = Field(ge=0, le=1000000)
     categoria: str = "Súper"
@@ -26,7 +28,7 @@ class ServiceData(BaseModel):
 
 class Receipt(BaseModel):
     tipo_documento: Literal[
-        "ticket", "recibo_luz", "recibo_agua", "recibo_gas", "recibo_internet", "otro"
+        "ticket", "recibo_luz", "recibo_agua", "recibo_gas", "recibo_internet", "nota", "comprobante_transferencia", "factura", "otro"
     ] = "ticket"
     comercio: str = Field(max_length=120)
     fecha: date
