@@ -91,10 +91,10 @@ await page.screenshot({ path: "/tmp/summa-ui/03-profile.png", fullPage: true });
 await page
   .getByRole("button", { name: "Guardar preferencias y empezar" })
   .click();
-await page.getByRole("heading", { name: "Presupuesto del hogar" }).waitFor();
+await page.getByRole("heading", { name: "Tu dinero, más claro" }).waitFor();
 assert.equal(await page.getByRole("navigation").getByRole("link").count(), 4);
 await page.screenshot({ path: "/tmp/summa-ui/04-home.png", fullPage: true });
-await page.getByRole("button", { name: /Registra movimiento/ }).click();
+await page.getByRole("button", { name: /Registrar movimiento/ }).click();
 await page.getByRole("dialog").waitFor();
 await page.getByLabel("Monto", { exact: true }).fill("250");
 await page.getByLabel("Nota (opcional)").fill("Compra de prueba");
@@ -105,7 +105,7 @@ await page.screenshot({
 await page.getByRole("button", { name: "Guardar movimiento" }).click();
 await page.getByText("Compra de prueba", { exact: true }).waitFor();
 await page.reload();
-await page.getByRole("heading", { name: "Presupuesto del hogar" }).waitFor();
+await page.getByRole("heading", { name: "Tu dinero, más claro" }).waitFor();
 await page.getByRole("link", { name: "Carrito", exact: true }).click();
 const nearby = page.getByRole("region", { name: "Supermercados cercanos" });
 assert.match(
@@ -170,6 +170,79 @@ await page.screenshot({
   path: "/tmp/summa-ui/07-simulator.png",
   fullPage: true,
 });
+// New finance flows: declared savings, extra income, report periods and agenda.
+await page
+  .getByRole("button", { name: "Registrar aportación", exact: true })
+  .click();
+await page
+  .getByRole("dialog")
+  .getByLabel("Monto (MXN)", { exact: true })
+  .fill("300");
+await page
+  .getByRole("button", { name: "Confirmar registro", exact: true })
+  .click();
+await page.getByRole("dialog").waitFor({ state: "hidden" });
+assert.match(await page.locator(".streak-count").innerText(), /1/);
+await page
+  .getByRole("button", { name: "Registrar retiro", exact: true })
+  .click();
+await page
+  .getByRole("dialog")
+  .getByLabel("Monto (MXN)", { exact: true })
+  .fill("50");
+await page
+  .getByRole("button", { name: "Confirmar registro", exact: true })
+  .click();
+await page.getByRole("dialog").waitFor({ state: "hidden" });
+assert.match(await page.locator(".goal-card").innerText(), /250.00/);
+await page.getByRole("link", { name: "Inicio", exact: true }).click();
+await page
+  .getByRole("button", { name: "Registrar movimiento", exact: true })
+  .click();
+await page.getByRole("button", { name: "Ingreso", exact: true }).click();
+await page.getByLabel("Tipo de ingreso").selectOption("extra");
+await page.getByLabel("Monto", { exact: true }).fill("500");
+await page.getByLabel("Nota (opcional)").fill("Ingreso extra de prueba");
+await page
+  .getByRole("button", { name: "Guardar movimiento", exact: true })
+  .click();
+await page.getByText("Ingreso extra de prueba", { exact: true }).waitFor();
+assert.match(
+  await page.locator(".report-bars").innerText(),
+  /Adicionales: \$500.00/,
+);
+const currentMonth = await page.getByLabel("Mes del reporte").inputValue();
+await page.getByLabel("Mes del reporte").fill("2020-01");
+await page
+  .getByText("No hay gastos registrados en este mes.", { exact: true })
+  .waitFor();
+assert.match(
+  await page.locator(".report-bars").innerText(),
+  /Adicionales: \$0.00/,
+);
+await page.getByLabel("Mes del reporte").fill(currentMonth);
+await page.getByText("Ingreso extra de prueba", { exact: true }).waitFor();
+await page.getByRole("button", { name: "Agregar evento", exact: true }).click();
+await page
+  .getByRole("dialog")
+  .getByLabel("Nombre", { exact: true })
+  .fill("Pago de prueba");
+await page
+  .getByRole("dialog")
+  .getByLabel("Monto (MXN)", { exact: true })
+  .fill("100");
+await page.getByRole("button", { name: "Guardar evento", exact: true }).click();
+await page.getByRole("dialog").waitFor({ state: "hidden" });
+await page.getByRole("button", { name: "Registrar pago", exact: true }).click();
+await page
+  .getByRole("button", { name: "Confirmar y registrar", exact: true })
+  .click();
+await page.getByRole("dialog").waitFor({ state: "hidden" });
+await page.getByText("Pago de prueba", { exact: true }).waitFor();
+await page.screenshot({ path: "/tmp/summa-ui/11-finance.png", fullPage: true });
+console.log(
+  "PASS: savings contributions/withdrawals, weekly streak, extra income graph, monthly report switching and scheduled payment.",
+);
 await page.getByRole("button", { name: /Notificaciones/ }).click();
 await page.getByRole("dialog").waitFor();
 await page.screenshot({
@@ -277,7 +350,7 @@ await page
   .getByRole("button", { name: "Iniciar sesión", exact: true })
   .last()
   .click();
-await page.getByRole("heading", { name: "Presupuesto del hogar" }).waitFor();
+await page.getByRole("heading", { name: "Tu dinero, más claro" }).waitFor();
 await page.getByText("Compra de prueba", { exact: true }).waitFor();
 assert.deepEqual(errors, []);
 assert.ok(

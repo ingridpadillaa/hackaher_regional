@@ -63,6 +63,10 @@ flask --app app run --debug
 
 La imagen Flask se construye desde la raíz con `docker build -f backend/Dockerfile -t summa-backend .`. Incluye las plantillas de `frontend/legacy/`. En Render, usa `backend/render.yaml` como ruta del Blueprint; el contexto es la raíz del repositorio.
 
+## Finanzas y experiencia · fases 1–3
+
+Reportes por mes con ingresos recibidos separados de previsiones, presupuesto mensual independiente, aportaciones y retiros por meta, racha semanal declarada y agenda de cobros/pagos/aportaciones. Fondos arena, Jami circular y Perfil simplificado. La migración aditiva a versión 2 se ejecuta al cargar cada hogar, conservando sus datos. Consulta [el modelo de datos](docs/MODELO_DATOS.md). No se ha desplegado esta actualización a producción ni cargado el dataset de demostración.
+
 ## Documentación
 
 - [Desarrollo, integraciones y despliegue](docs/DESARROLLO.md).

@@ -22,6 +22,7 @@ export function MovementModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const [incomeKind, setIncomeKind] = useState<"regular" | "extra">("extra");
   const [type, setType] = useState<"gasto" | "ingreso">("gasto");
   const [method, setMethod] = useState<Movement["method"]>("manual");
   const [amount, setAmount] = useState("");
@@ -209,6 +210,7 @@ export function MovementModal({
         await call("saveMovement", {
           requestId: requestId.current,
           type,
+          ...(type === "ingreso" ? { incomeKind } : {}),
           amount: Number(amount),
           category: type === "ingreso" ? "Otros" : category,
           note,
@@ -262,6 +264,19 @@ export function MovementModal({
             Ingreso
           </button>
         </div>
+        {type === "ingreso" && (
+          <Field label="Tipo de ingreso">
+            <select
+              value={incomeKind}
+              onChange={(e) =>
+                setIncomeKind(e.target.value as "regular" | "extra")
+              }
+            >
+              <option value="extra">Adicional o extraordinario</option>
+              <option value="regular">Habitual (sueldo, pensión…)</option>
+            </select>
+          </Field>
+        )}
         {type === "gasto" && (
           <>
             <h3 className="field-title">Método de registro</h3>

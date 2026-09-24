@@ -110,7 +110,6 @@ export function JamiChat() {
         onClick={() => setOpen(!open)}
       >
         {open ? <X /> : <Jami kind="avatar" />}
-        <span>Jami</span>
       </button>
       {open && (
         <section
@@ -123,7 +122,7 @@ export function JamiChat() {
           }}
         >
           <header>
-            <MessageCircle />
+            <Jami kind="avatar" className="chat-mascot" />
             <strong>Jami, contigo</strong>
             <button
               className="icon-button"

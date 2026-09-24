@@ -2,6 +2,12 @@
 
 Plataforma del hogar con **React + Vite + TypeScript + Tailwind CSS**, conectada mediante funciones autenticadas a Firebase. Interfaz en español de México, basada en las cinco diapositivas de `HackHer Regional UI - UX.pdf` y en las indicaciones del equipo.
 
+## Actualización · fases 1–3
+
+El modelo vigente es [versión 2](MODELO_DATOS.md). El reporte mensual diferencia ingresos recibidos habituales/adicionales, gastos y transferencias; el presupuesto es un límite independiente. Los ingresos de perfiles son previsiones. Las metas admiten aportaciones/retiros declarados y una racha semanal sin exigir conexión bancaria. La evidencia bancaria sigue separada y no se simula. La agenda permite programar y confirmar cobros, pagos y aportaciones; la confirmación se registra de forma idempotente.
+
+La interfaz usa fondos arena, Jami circular sin nombre fuera del chat y Perfil sin las tarjetas de estilo de vida, prioridades duplicadas ni personalización del asistente. El historial y la gráfica comparten el mes seleccionado. Las descripciones históricas de racha exclusivamente bancaria y presupuesto basado en ingreso de las secciones siguientes quedan sustituidas por este modelo. Esta actualización se verificó en emuladores y no se ha desplegado a producción.
+
 ## Estado
 
 La aplicación React está implementada en `frontend/` y el backend TypeScript en `backend/functions/`. Compila y su recorrido principal se probó en Chrome móvil con Firebase Emulator Suite. El despliegue a `hackaher` **no se ejecutó: el permiso para publicar fue rechazado**. La versión Python permanece en `backend/app/` como referencia histórica; no participa en el build de React.

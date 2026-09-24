@@ -44,8 +44,9 @@ export const preferencesSchema = z.object({
 });
 export const movementSchema = z.object({
   requestId: z.string().uuid(),
-  type: z.enum(["gasto", "ingreso"]),
-  amount: z.number().positive().max(10000000),
+  type: z.enum(["gasto", "ingreso", "transferencia"]),
+  incomeKind: z.enum(["regular", "extra"]).optional(),
+  amount: z.number().positive().max(10000000).multipleOf(0.01),
   category: z.enum(categories).default("Otros"),
   note: z.string().trim().max(400),
   date: z
@@ -95,32 +96,32 @@ export const monthlyIncome = (members: any[]) =>
     ),
   );
 export function summarize(movements: any[], budget: number) {
-  const expenses = round(
-    movements
-      .filter((m) => m.type === "gasto")
-      .reduce((s, m) => s + m.amount, 0),
-  );
-  const extraIncome = round(
-    movements
-      .filter((m) => m.type === "ingreso")
-      .reduce((s, m) => s + m.amount, 0),
-  );
-  const byCategory = categories.map((name) => ({
-    name,
-    amount: round(
-      movements
-        .filter((m) => m.type === "gasto" && m.category === name)
-        .reduce((s, m) => s + m.amount, 0),
+  const sum = (pred: (m: any) => boolean) =>
+    round(movements.filter(pred).reduce((a, m) => a + m.amount, 0));
+  const expenses = sum((m) => m.type === "gasto"),
+    regularIncome = sum(
+      (m) => m.type === "ingreso" && m.incomeKind === "regular",
     ),
-  }));
+    extraIncome = sum(
+      (m) => m.type === "ingreso" && m.incomeKind !== "regular",
+    ),
+    receivedIncome = round(regularIncome + extraIncome);
   return {
     expenses,
+    regularIncome,
     extraIncome,
+    receivedIncome,
+    balance: round(receivedIncome - expenses),
+    remaining: round(receivedIncome - expenses),
     budget,
-    remaining: round(budget + extraIncome - expenses),
-    byCategory,
+    budgetRemaining: round(budget - expenses),
+    byCategory: categories.map((name) => ({
+      name,
+      amount: sum((m) => m.type === "gasto" && m.category === name),
+    })),
   };
 }
+
 // Fixed Mexican calendar dates only. Amounts always come from this household's history.
 const seasonalDates = [
   ["Día de Reyes", 1, 6],

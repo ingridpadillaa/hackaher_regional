@@ -153,6 +153,7 @@ function App() {
             <Home
               state={state}
               onRegister={() => setMovement(true)}
+              onSaved={refresh}
               success={success}
             />
           }

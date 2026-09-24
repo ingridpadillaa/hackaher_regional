@@ -23,7 +23,8 @@ export interface Preferences {
 }
 export interface Movement {
   id?: string;
-  type: "gasto" | "ingreso";
+  type: "gasto" | "ingreso" | "transferencia";
+  incomeKind?: "regular" | "extra";
   amount: number;
   category: string;
   note: string;
@@ -45,6 +46,7 @@ export interface Goal {
   name: string;
   target: number;
   saved: number;
+  targetDate?: string;
 }
 export interface Notice {
   id: string;
@@ -53,7 +55,37 @@ export interface Notice {
   read: boolean;
   kind: string;
 }
+export interface SavingsEntry {
+  id: string;
+  goalId: string;
+  type: "contribution" | "withdrawal" | "opening";
+  amount: number;
+  date: string;
+  note: string;
+  source: string;
+  verified: boolean;
+}
+export interface Schedule {
+  id: string;
+  title: string;
+  kind: "income" | "payment" | "saving";
+  amount: number;
+  nextDate: string;
+  frequency: "once" | "weekly" | "biweekly" | "monthly";
+  category: string;
+  goalId?: string;
+  active: boolean;
+}
 export interface State {
+  savingsEntries: SavingsEntry[];
+  savings: {
+    streak: number;
+    weeklyNet: number;
+    source: string;
+    currentWeek: string;
+  };
+  schedules: Schedule[];
+  expectedIncome: number;
   user: {
     nombre: string;
     hogarId?: string;
@@ -76,6 +108,10 @@ export interface State {
   date: string;
   summary: {
     expenses: number;
+    regularIncome: number;
+    receivedIncome: number;
+    balance: number;
+    budgetRemaining: number;
     extraIncome: number;
     budget: number;
     remaining: number;

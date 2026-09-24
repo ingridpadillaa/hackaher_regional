@@ -2,7 +2,7 @@
 :root {
   font-family: "Nunito", sans-serif;
   color: #30303d;
-  background: #fffcf8;
+  background: #f3ede3;
   font-synthesis: none;
   font-weight: 500;
   --pink: #f52f69;
@@ -481,9 +481,7 @@ form {
 }
 .onboarding,
 .profile-page {
-  background:
-    radial-gradient(ellipse at 105% 200px, #fbe6df 0, transparent 40%),
-    linear-gradient(#fffcf8 100px, #fcf0e2);
+  background: #f3ede3;
   border-radius: 25px;
 }
 .onboarding > .logo,
@@ -559,7 +557,7 @@ form {
   max-width: 570px;
   min-height: 100dvh;
   margin: auto;
-  background: linear-gradient(#fdfbf7 40%, #ffebce);
+  background: #f3ede3;
   padding: 0 28px 28px;
 }
 .welcome-art {
@@ -1502,7 +1500,7 @@ form {
   width: 110px;
   min-height: 132px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #ffcb83, #ffcbd7);
+  background: #eee1cc;
   color: #e75471;
   display: flex;
   align-items: center;
@@ -1990,4 +1988,235 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .profile-members button {
   max-width: 100px;
+}
+
+/* Phase 3: plain sand surfaces, compact assistant and financial agenda. */
+body,
+.app-shell,
+.page,
+.auth-page {
+  background-color: #f3ede3;
+}
+:root {
+  --muted: #68616a;
+  --line: #e5dbce;
+  --cream: #f3ede3;
+}
+.jami-bubble {
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  overflow: hidden;
+  justify-content: center;
+  border: 2px solid #ead5c8;
+}
+.jami-bubble .jami {
+  position: absolute;
+  width: 95px;
+  height: 95px;
+  max-width: none;
+  object-fit: cover;
+  top: -4px;
+  left: -18px;
+}
+.jami-chat header .chat-mascot {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  border-radius: 16px;
+}
+.jami-chat header {
+  background: #f3ede3;
+}
+.monthly-report,
+.financial-agenda {
+  margin: 22px 0;
+  padding: 24px;
+}
+.monthly-report h3 {
+  margin: 24px 0 12px;
+}
+.report-bars {
+  display: grid;
+  gap: 20px;
+  margin: 24px 0;
+}
+.report-bars > div > strong {
+  float: right;
+}
+.report-track {
+  display: flex;
+  height: 18px;
+  background: #eee8de;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.report-track i {
+  display: block;
+  height: 100%;
+  min-width: 0;
+}
+.report-track .regular {
+  background: #38785a;
+}
+.report-track .extra {
+  background: #6c6197;
+}
+.report-track .expense {
+  background: #bd5269;
+}
+.report-balance {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.report-balance strong {
+  font-size: 24px;
+}
+.budget-line {
+  margin: 18px 0;
+  padding: 12px;
+  background: #f3ede3;
+  border-radius: 12px;
+  font-size: 14px;
+}
+.budget-line button {
+  display: block;
+  margin-top: 8px;
+}
+.agenda-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin: 20px 0;
+}
+.month-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  text-transform: capitalize;
+}
+.month-navigation button {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: #f3ede3;
+  border-radius: 12px;
+  font-size: 26px;
+}
+.agenda-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  text-align: center;
+}
+.agenda-grid > span {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 0;
+}
+.agenda-grid button {
+  position: relative;
+  height: 44px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+}
+.agenda-grid button.today {
+  border-color: #84775f;
+}
+.agenda-grid button.selected {
+  background: #483d35;
+  color: white;
+}
+.agenda-grid i {
+  position: absolute;
+  bottom: 4px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #bc4967;
+}
+.agenda-event {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.agenda-event strong {
+  display: block;
+  margin: 5px 0;
+}
+.agenda-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.agenda-actions button {
+  min-height: 44px;
+}
+details {
+  margin: 16px 0;
+}
+summary {
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 10px 0;
+}
+details p {
+  margin: 8px 0;
+}
+.saving-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+}
+.saving-actions .button {
+  font-size: 13px;
+  padding: 10px 12px;
+}
+.goal-card > div {
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .agenda-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .monthly-report,
+  .financial-agenda {
+    padding: 16px;
+  }
+  .monthly-report > .section-heading,
+  .financial-agenda > .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .monthly-report .category-row {
+    grid-template-columns: 32px 1fr auto;
+  }
+  .monthly-report .category-row .progress {
+    display: none;
+  }
+  .agenda-event {
+    flex-direction: column;
+  }
+  .agenda-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+  .goal-card {
+    grid-template-columns: 1fr;
+  }
 }

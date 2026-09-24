@@ -6,6 +6,14 @@ import { defineJsonSecret } from "firebase-functions/params";
 import { bankSession, syncBank, type IntegrationSecrets } from "./banking";
 import { extractMovements } from "./extraction";
 import { replyToChat } from "./jami";
+import {
+  dateSchema,
+  savingsSchema,
+  scheduleSchema,
+  nextOccurrence,
+  ledgerSummary,
+  savingsStats,
+} from "./finance";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
@@ -16,7 +24,6 @@ import {
   cartSchema,
   today,
   round,
-  summarize,
   monthlyIncome,
   seasonalForecast,
   verifiedStreak,
@@ -75,6 +82,70 @@ async function rateLimit(uid: string, kind: string, limit: number) {
     t.set(ref, { count: n + 1, expiresAt: new Date(Date.now() + 3600000) });
   });
 }
+// Additive, transactional migration: old movements and member identities stay intact.
+async function ensureFinanceSchema(home: any) {
+  await db.runTransaction(async (t) => {
+    const snapshot: any = await t.get(home);
+    const old = snapshot.data() as any;
+    if ((old.schemaVersion ?? 1) >= 2) return;
+    const goals = await t.get(home.collection("goals"));
+    const members = await t.get(home.collection("members"));
+    for (const doc of goals.docs) {
+      const g = doc.data() as any;
+      if (g.saved > 0)
+        t.set(home.collection("savingsEntries").doc(`opening_${doc.id}`), {
+          goalId: doc.id,
+          type: "opening",
+          amount: g.saved,
+          date: today(),
+          source: "legacy",
+          verified: false,
+          note: "Saldo previo conservado; no acredita racha ni verificación bancaria.",
+          createdAt: new Date().toISOString(),
+        });
+    }
+    for (const doc of members.docs) {
+      const m = doc.data() as any;
+      t.set(home.collection("incomePlans").doc(doc.id), {
+        memberId: doc.id,
+        amount: m.income ?? 0,
+        frequency: m.period ?? "mensual",
+        nextDate: null,
+        source: "profile",
+        active: true,
+      });
+    }
+    t.update(home, {
+      schemaVersion: 2,
+      currency: "MXN",
+      timezone: "America/Monterrey",
+      migratedAt: new Date().toISOString(),
+    });
+    t.set(home.collection("budgets").doc(today().slice(0, 7)), {
+      amount: old.preferences?.monthlyBudget ?? 0,
+      source: "legacy",
+      updatedAt: new Date().toISOString(),
+    });
+  });
+}
+async function monthReport(home: any, uid: string, month: string) {
+  const [list, budget] = await Promise.all([
+    rows(
+      home
+        .collection("movements")
+        .where("date", ">=", month + "-01")
+        .where("date", "<=", month + "-31")
+        .orderBy("date", "desc"),
+    ),
+    home.collection("budgets").doc(month).get(),
+  ]);
+  const movements = list.filter((m: any) => !m.private || m.ownerUid === uid);
+  return {
+    month,
+    movements,
+    summary: ledgerSummary(movements, budget.data()?.amount ?? 0),
+  };
+}
 async function bootstrap(uid: string, name: string, email: string) {
   const ref = db.doc(`usuarios/${uid}`);
   await db.runTransaction(async (t) => {
@@ -90,6 +161,7 @@ async function bootstrap(uid: string, name: string, email: string) {
   const user = (await ref.get()).data()!;
   if (!user.hogarId) return { user, home: null };
   const { home, data } = await context(uid);
+  await ensureFinanceSchema(home);
   // New React schema intentionally separate from legacy Python collections.
   const [members, goals, bankEvidence, notifications] = await Promise.all([
     rows(home.collection("members")),
@@ -117,7 +189,12 @@ async function bootstrap(uid: string, name: string, email: string) {
   );
   const visible = (list: any[]) =>
     list.filter((m) => !m.private || m.ownerUid === uid);
-  const summary = summarize(visible(movements), monthlyIncome(members));
+  const report = await monthReport(home, uid, month);
+  const summary = report.summary;
+  const [savingsEntries, schedules] = await Promise.all([
+    rows(home.collection("savingsEntries").orderBy("date", "desc")),
+    rows(home.collection("schedules").orderBy("nextDate", "asc")),
+  ]);
   const forecast = seasonalForecast(date, visible(forecastHistory));
   const alerts: any[] = [];
   if (data.preferences?.alerts !== false) {
@@ -167,9 +244,13 @@ async function bootstrap(uid: string, name: string, email: string) {
   const bankConnection = (await db.doc(`bankConnections/${uid}`).get()).data();
   return {
     user,
-    home: { id: home.id, ...data, members },
+    home: { id: home.id, ...data, schemaVersion: 2, members },
     movements: visible(movements),
     goals,
+    savingsEntries,
+    savings: savingsStats(savingsEntries, date),
+    schedules,
+    expectedIncome: monthlyIncome(members),
     summary,
     forecast,
     cart,
@@ -336,6 +417,11 @@ async function handle(
         : null;
       const linked = userRef ? await t.get(userRef) : null;
       t.delete(memberRef);
+      t.set(
+        home.collection("incomePlans").doc(memberId),
+        { active: false },
+        { merge: true },
+      );
       if (linked?.data()?.hogarId === home.id)
         t.update(userRef!, {
           hogarId: FieldValue.delete(),
@@ -377,9 +463,24 @@ async function handle(
       batch.set(home.collection("members").doc(memberId), fields, {
         merge: true,
       });
+      batch.set(
+        home.collection("incomePlans").doc(memberId),
+        {
+          memberId,
+          amount: member.income,
+          frequency: member.period,
+          source: "profile",
+          active: true,
+        },
+        { merge: true },
+      );
     }
     batch.update(home, {
-      preferences: { ...preferences, monthlyBudget: monthlyIncome(members) },
+      preferences: {
+        ...preferences,
+        assistantTone: "cercano",
+        monthlyBudget: data.preferences?.monthlyBudget ?? 0,
+      },
       monthlyIncome: monthlyIncome(members),
       personalized: true,
     });
@@ -406,6 +507,168 @@ async function handle(
       "failed-precondition",
       "Completa la personalización primero.",
     );
+  if (action === "report") {
+    const month = z
+      .string()
+      .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+      .parse(p.month);
+    return monthReport(home, uid, month);
+  }
+  if (action === "saveBudget") {
+    if (data.ownerUid !== uid)
+      throw new HttpsError(
+        "permission-denied",
+        "Solo quien administra puede editar el presupuesto.",
+      );
+    const b = z
+      .object({
+        month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+        amount: z.number().min(0).max(1000000000).multipleOf(0.01),
+      })
+      .parse(p);
+    await home.collection("budgets").doc(b.month).set({
+      amount: b.amount,
+      source: "manual",
+      updatedBy: uid,
+      updatedAt: new Date().toISOString(),
+    });
+    return { ok: true };
+  }
+  if (action === "saveSavingsEntry") {
+    const entry = savingsSchema.parse(p);
+    if (entry.date > today())
+      throw new HttpsError(
+        "invalid-argument",
+        "No puedes registrar ahorro futuro.",
+      );
+    const ref = home.collection("savingsEntries").doc(entry.requestId),
+      goal = home.collection("goals").doc(entry.goalId);
+    await db.runTransaction(async (t) => {
+      const [existing, g] = await Promise.all([t.get(ref), t.get(goal)]);
+      if (existing.exists) {
+        if (existing.data()?.ownerUid !== uid)
+          throw new HttpsError("permission-denied", "Registro ajeno.");
+        return;
+      }
+      if (!g.exists) throw new HttpsError("not-found", "Meta no encontrada.");
+      const saved = round(
+        (g.data()?.saved ?? 0) +
+          (entry.type === "withdrawal" ? -entry.amount : entry.amount),
+      );
+      if (saved < 0)
+        throw new HttpsError(
+          "failed-precondition",
+          "El retiro supera lo ahorrado en esta meta.",
+        );
+      t.create(ref, {
+        ...entry,
+        source: "manual",
+        verified: false,
+        ownerUid: uid,
+        createdAt: new Date().toISOString(),
+      });
+      t.update(goal, { saved, updatedAt: new Date().toISOString() });
+    });
+    return { ok: true };
+  }
+  if (action === "saveSchedule") {
+    const entry = scheduleSchema.parse(p);
+    if (
+      entry.goalId &&
+      !(await home.collection("goals").doc(entry.goalId).get()).exists
+    )
+      throw new HttpsError("not-found", "Meta no encontrada.");
+    const ref = home
+      .collection("schedules")
+      .doc(entry.id ?? db.collection("_ids").doc().id);
+    if (entry.id && !(await ref.get()).exists)
+      throw new HttpsError("not-found", "Evento no encontrado.");
+    const { id: _, ...fields } = entry;
+    await ref.set(
+      {
+        ...fields,
+        anchorDay: Number(entry.nextDate.slice(-2)),
+        active: true,
+        updatedBy: uid,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true },
+    );
+    return { ok: true };
+  }
+  if (action === "cancelSchedule") {
+    const ref = home.collection("schedules").doc(id.parse(p.id));
+    await ref.update({ active: false, updatedBy: uid });
+    return { ok: true };
+  }
+  if (action === "completeSchedule") {
+    const scheduleId = id.parse(p.id),
+      due = dateSchema.parse(p.date),
+      actual = dateSchema.parse(p.actualDate);
+    if (actual > today() || due > today())
+      throw new HttpsError(
+        "invalid-argument",
+        "Confirma el evento cuando llegue su fecha.",
+      );
+    const ref = home.collection("schedules").doc(scheduleId);
+    const receipt = home
+      .collection("scheduleCompletions")
+      .doc(`${scheduleId}_${due}`);
+    await db.runTransaction(async (t) => {
+      const [record, done] = await Promise.all([t.get(ref), t.get(receipt)]);
+      if (done.exists) return;
+      const event = record.data();
+      if (!event?.active || event.nextDate !== due)
+        throw new HttpsError(
+          "failed-precondition",
+          "El evento cambió. Actualiza la agenda.",
+        );
+      const target =
+        event.kind === "saving"
+          ? home.collection("goals").doc(event.goalId)
+          : null;
+      const goal = target ? await t.get(target) : null;
+      if (target && !goal?.exists)
+        throw new HttpsError("not-found", "Meta no encontrada.");
+      const common = {
+        amount: event.amount,
+        date: actual,
+        ownerUid: uid,
+        createdAt: new Date().toISOString(),
+        scheduleId,
+      };
+      if (target) {
+        t.create(home.collection("savingsEntries").doc(receipt.id), {
+          ...common,
+          goalId: event.goalId,
+          type: "contribution",
+          source: "manual",
+          verified: false,
+          note: event.title,
+        });
+        t.update(target, {
+          saved: round((goal!.data()?.saved ?? 0) + event.amount),
+        });
+      } else
+        t.create(home.collection("movements").doc(receipt.id), {
+          ...common,
+          type: event.kind === "income" ? "ingreso" : "gasto",
+          incomeKind: "regular",
+          category: event.category,
+          note: event.title,
+          method: "manual",
+          private: false,
+        });
+      const next = nextOccurrence(due, event.frequency, event.anchorDay);
+      t.update(ref, {
+        active: !!next,
+        nextDate: next ?? due,
+        lastCompletedDate: actual,
+      });
+      t.create(receipt, { ownerUid: uid, date: actual, dueDate: due });
+    });
+    return { ok: true };
+  }
   if (action === "saveMovement") {
     const m = movementSchema.parse(p);
     if (m.date > today())
@@ -478,19 +741,25 @@ async function handle(
       .object({
         id: id.optional(),
         name: z.string().trim().min(1).max(80),
-        target: z.number().positive().max(10000000),
+        target: z.number().positive().max(10000000).multipleOf(0.01),
+        targetDate: z.union([dateSchema, z.literal("")]).optional(),
       })
       .parse(p);
     if (g.id) {
       const ref = home.collection("goals").doc(g.id);
       if (!(await ref.get()).exists)
         throw new HttpsError("not-found", "Meta no encontrada.");
-      await ref.update({ name: g.name, target: g.target });
+      await ref.update({
+        name: g.name,
+        target: g.target,
+        targetDate: g.targetDate ?? "",
+      });
     } else
       await home.collection("goals").add({
         name: g.name,
         target: g.target,
         saved: 0,
+        targetDate: g.targetDate ?? "",
         ownerUid: uid,
         createdAt: new Date().toISOString(),
       });

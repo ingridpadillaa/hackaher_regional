@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, ChevronRight, Receipt, CheckCircle2 } from "lucide-react";
 import { type State, type Movement, money, dateLabel } from "./types";
 import { CategoryIcon, Empty, Modal, Button, ErrorText } from "./ui";
+import { Agenda } from "./Agenda";
 import { call, errorMessage } from "./firebase";
 const colors = [
   "#fa4d7c",
@@ -24,7 +25,7 @@ export function History({
   return (
     <section className="history">
       <div className="section-heading between">
-        <h2>Historial de gastos</h2>
+        <h2>Historial de movimientos</h2>
         {onAll && (
           <button className="text-button" onClick={onAll}>
             Ver todos
@@ -82,199 +83,235 @@ export function History({
 export function Home({
   state,
   onRegister,
+  onSaved,
   success,
 }: {
   state: State;
   onRegister: () => void;
+  onSaved: () => Promise<void>;
   success: boolean;
 }) {
-  const [all, setAll] = useState(false);
-  const [more, setMore] = useState(false);
   const [month, setMonth] = useState(state.date.slice(0, 7));
-  const [items, setItems] = useState(state.movements);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const { summary, forecast } = state;
-  const percent = summary.budget
-    ? Math.round((summary.expenses / summary.budget) * 100)
-    : 0;
-  const date = new Date(forecast.date + "T12:00:00");
-  const year = date.getFullYear(),
-    mo = date.getMonth();
-  const first = new Date(year, mo, 1).getDay(),
-    days = new Date(year, mo + 1, 0).getDate();
-  const amounts = summary.byCategory.filter((c) => c.amount > 0);
-  const shown = more
-    ? summary.byCategory
-    : amounts.length
-      ? amounts.slice(0, 5)
-      : summary.byCategory.slice(0, 5);
-  async function history(m: string) {
-    setMonth(m);
+  const [report, setReport] = useState({
+    month: state.date.slice(0, 7),
+    movements: state.movements,
+    summary: state.summary,
+  });
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const [all, setAll] = useState(false),
+    [budgetOpen, setBudgetOpen] = useState(false),
+    [budget, setBudget] = useState("");
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    let active = true;
     setBusy(true);
     setError("");
-    try {
-      setItems(await call("history", { month: m }));
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+    call<typeof report>("report", { month })
+      .then((r) => {
+        if (active) setReport(r);
+      })
+      .catch((e) => {
+        if (active) setError(errorMessage(e));
+      })
+      .finally(() => {
+        if (active) setBusy(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [month, state, revision]);
+  const summary = report.summary;
+  const max = Math.max(summary.receivedIncome, summary.expenses, 1);
   return (
     <main className="page home-page">
       <header className="home-title">
         <div>
-          <span className="eyebrow">
-            {new Date(state.date + "T12:00:00").toLocaleDateString("es-MX", {
-              month: "long",
-              year: "numeric",
-            })}
-          </span>
-          <h1>Presupuesto del hogar</h1>
-          <p>
-            Conoce cómo van tus finanzas y recibe recomendaciones para alcanzar
-            tus metas.
-          </p>
+          <span className="eyebrow">TU HOGAR, AL DÍA</span>
+          <h1>Tu dinero, más claro</h1>
+          <p>Revisa tus movimientos y organiza lo que viene.</p>
         </div>
         <button className="register-button" onClick={onRegister}>
           <Plus size={20} />
-          Registra
-          <br />
-          movimiento
+          Registrar movimiento
         </button>
       </header>
-      <section className="budget-card">
-        <div
-          className="donut"
-          role="img"
-          aria-label={`Has gastado ${money(summary.expenses)} de ${money(summary.budget)}`}
-          style={{
-            background: `conic-gradient(#fa4d7c 0 ${Math.min(100, percent)}%, #ffbb6d ${Math.min(100, percent)}% 100%)`,
-          }}
-        >
-          <div>
-            <strong>{money(summary.expenses)}</strong>
-            <small>de {money(summary.budget)}</small>
-          </div>
-        </div>
-        <div className="budget-legend">
-          <div>
-            <i />
-            <span>Gastos</span>
-            <strong>{money(summary.expenses)}</strong>
-            <b>{percent}%</b>
-          </div>
-          <div>
-            <i className="orange" />
-            <span>Ingreso del hogar</span>
-            <strong>{money(summary.budget)}</strong>
-            <b>100%</b>
-          </div>
-          {summary.extraIncome > 0 && (
-            <div>
-              <i className="green-dot" />
-              <span>Ingreso extra</span>
-              <strong>{money(summary.extraIncome)}</strong>
-            </div>
-          )}
-        </div>
-      </section>
-      <section className="category-section">
-        <div className="section-heading between">
-          <h3>Gastos por categoría</h3>
-          <button className="text-button" onClick={() => setMore(!more)}>
-            {more ? "Ver menos" : "Ver más"}
-            <ChevronRight size={14} />
-          </button>
-        </div>
-        {shown.map((c) => {
-          const i = summary.byCategory.findIndex((x) => x.name === c.name);
-          const ratio = summary.expenses
-            ? Math.round((c.amount / summary.expenses) * 100)
-            : 0;
-          return (
-            <div className="category-row" key={c.name}>
-              <span
-                className="category-icon"
-                style={{ color: colors[i], background: colors[i] + "22" }}
-              >
-                <CategoryIcon name={c.name} />
-              </span>
-              <span>{c.name}</span>
-              <div className="progress">
-                <i style={{ width: ratio + "%", background: colors[i] }} />
-              </div>
-              <strong>{money(c.amount)}</strong>
-              <small style={{ color: colors[i] }}>{ratio}%</small>
-            </div>
-          );
-        })}
-        <p className="helper">Porcentaje de tus gastos registrados este mes.</p>
-      </section>
-      <section className="trends">
-        <h2>Tendencias</h2>
-        <p>Anticípate a lo que viene.</p>
-        <div className="calendar-card">
-          <div className="calendar-day">
-            <span>{date.toLocaleDateString("es-MX", { weekday: "long" })}</span>
-            <strong>{date.getDate()}</strong>
-            <h3>{forecast.name}</h3>
-            {forecast.extra !== null ? (
-              <p>
-                Podrías gastar <b>{money(forecast.extra)} más</b>.
-              </p>
-            ) : (
-              <p>
-                Aún no hay historial suficiente para calcular el gasto
-                adicional.
-              </p>
-            )}
-            <small>{forecast.source}</small>
-          </div>
-          <div className="calendar">
-            <h4>
-              {date.toLocaleDateString("es-MX", { month: "long" })} {year}
-            </h4>
-            <div>
-              {["D", "L", "M", "M", "J", "V", "S"].map((x, i) => (
-                <b key={"d" + i}>{x}</b>
-              ))}
-              {Array.from({ length: first }, (_, i) => (
-                <span key={"b" + i} />
-              ))}
-              {Array.from({ length: days }, (_, i) => (
-                <span
-                  key={i}
-                  className={i + 1 === date.getDate() ? "marked" : ""}
-                >
-                  {i + 1}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
       {success && (
-        <p className="success">
+        <p className="success" role="status">
           <CheckCircle2 />
-          ¡Movimiento guardado! Se agregó a tu historial.
+          Movimiento guardado.
         </p>
       )}
-      <History items={state.movements.slice(0, 8)} onAll={() => setAll(true)} />
-      {all && (
-        <Modal title="Todos tus movimientos" onClose={() => setAll(false)}>
+      <section className="card monthly-report">
+        <div className="section-heading between">
+          <div>
+            <h2>Reporte mensual</h2>
+            <p>Solo movimientos recibidos y registrados.</p>
+          </div>
           <label className="field">
-            Mes
+            Mes del reporte
             <input
               type="month"
               value={month}
               max={state.date.slice(0, 7)}
-              onChange={(e) => e.target.value && history(e.target.value)}
+              onChange={(e) => e.target.value && setMonth(e.target.value)}
             />
           </label>
-          <ErrorText text={error} />
-          {busy ? <p>Cargando…</p> : <History items={items} />}
+        </div>
+        <ErrorText text={error} />
+        {busy ? (
+          <p role="status">Actualizando reporte…</p>
+        ) : error ? (
+          <p>
+            El reporte no pudo actualizarse. Intenta seleccionar el mes otra
+            vez.
+          </p>
+        ) : (
+          <>
+            <div
+              className="report-bars"
+              role="img"
+              aria-label={`Ingresos recibidos ${money(summary.receivedIncome)}: habituales ${money(summary.regularIncome)}, adicionales ${money(summary.extraIncome)}. Gastos ${money(summary.expenses)}.`}
+            >
+              <div>
+                <span>Ingresos recibidos</span>
+                <strong>{money(summary.receivedIncome)}</strong>
+                <div className="report-track">
+                  <i
+                    className="regular"
+                    style={{ width: `${(summary.regularIncome / max) * 100}%` }}
+                  />
+                  <i
+                    className="extra"
+                    style={{ width: `${(summary.extraIncome / max) * 100}%` }}
+                  />
+                </div>
+                <small>
+                  Habituales: {money(summary.regularIncome)} · Adicionales:{" "}
+                  {money(summary.extraIncome)}
+                </small>
+              </div>
+              <div>
+                <span>Gastos registrados</span>
+                <strong>{money(summary.expenses)}</strong>
+                <div className="report-track">
+                  <i
+                    className="expense"
+                    style={{ width: `${(summary.expenses / max) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="report-balance">
+              <span>Balance de movimientos</span>
+              <strong>{money(summary.balance)}</strong>
+            </div>
+            <p className="helper">
+              Ingresos recibidos menos gastos. Las transferencias y aportaciones
+              a metas no son ingresos nuevos. Este balance no representa un
+              saldo bancario.
+            </p>
+            <div className="budget-line">
+              <span>
+                {summary.budget > 0
+                  ? `Límite de gasto: ${money(summary.budget)} · Restante: ${money(summary.budgetRemaining)}`
+                  : "Sin presupuesto definido para este mes."}
+              </span>
+              {state.user.rol === "admin" && (
+                <button
+                  className="text-button"
+                  onClick={() => {
+                    setBudget(String(summary.budget));
+                    setBudgetOpen(true);
+                  }}
+                >
+                  Editar presupuesto
+                </button>
+              )}
+            </div>
+            <h3>Gastos por categoría</h3>
+            {summary.byCategory
+              .filter((c) => c.amount > 0)
+              .map((c, i) => (
+                <div className="category-row" key={c.name}>
+                  <span
+                    className="category-icon"
+                    style={{ color: colors[i % colors.length] }}
+                  >
+                    <CategoryIcon name={c.name} />
+                  </span>
+                  <span>{c.name}</span>
+                  <div className="progress">
+                    <i
+                      style={{
+                        width: `${summary.expenses ? (c.amount / summary.expenses) * 100 : 0}%`,
+                        background: colors[i % colors.length],
+                      }}
+                    />
+                  </div>
+                  <strong>{money(c.amount)}</strong>
+                </div>
+              ))}
+            {summary.expenses === 0 && (
+              <p className="helper">No hay gastos registrados en este mes.</p>
+            )}
+            <History
+              items={report.movements.slice(0, 8)}
+              onAll={() => setAll(true)}
+            />
+          </>
+        )}
+      </section>
+      <Agenda state={state} onSaved={onSaved} />
+      {all && (
+        <Modal
+          title="Movimientos del mes seleccionado"
+          onClose={() => setAll(false)}
+        >
+          <History items={report.movements} />
+        </Modal>
+      )}
+      {budgetOpen && (
+        <Modal
+          title="Presupuesto del mes"
+          onClose={() => !busy && setBudgetOpen(false)}
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setBusy(true);
+              setError("");
+              try {
+                await call("saveBudget", { month, amount: Number(budget) });
+                await onSaved();
+                setRevision((x) => x + 1);
+                setBudgetOpen(false);
+              } catch (e) {
+                setError(errorMessage(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <label className="field">
+              Límite de gasto para {month}
+              <input
+                type="number"
+                min="0"
+                max="1000000000"
+                step="0.01"
+                required
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+              />
+            </label>
+            <p>
+              Es un límite de gasto, no un ingreso. Cero significa sin
+              presupuesto.
+            </p>
+            <ErrorText text={error} />
+            <Button busy={busy}>Guardar presupuesto</Button>
+          </form>
         </Modal>
       )}
     </main>
