@@ -1,3 +1,4 @@
+import { activityStats } from "./activity";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
@@ -279,6 +280,12 @@ async function bootstrap(uid: string, name: string, email: string) {
     goals,
     savingsEntries,
     savings: savingsStats(savingsEntries, date),
+    activity: activityStats(
+      await rows(home.collection("movements").where("ownerUid", "==", uid)),
+      await rows(home.collection("dailyActivity").doc(uid).collection("days")),
+      uid,
+      date,
+    ),
     schedules,
     expectedIncome: monthlyIncome(members),
     summary,
@@ -824,6 +831,15 @@ async function handle(
           method: "manual",
           private: false,
         });
+      if (event.kind === "payment" && actual === today())
+        t.set(
+          home
+            .collection("dailyActivity")
+            .doc(uid)
+            .collection("days")
+            .doc(actual),
+          { date: actual, noExpense: false },
+        );
       const next = nextOccurrence(due, event.frequency, event.anchorDay);
       t.update(ref, {
         active: !!next,
@@ -831,6 +847,35 @@ async function handle(
         lastCompletedDate: actual,
       });
       t.create(receipt, { ownerUid: uid, date: actual, dueDate: due });
+    });
+    return { ok: true };
+  }
+  if (action === "confirmNoExpense") {
+    const date = today();
+    const ref = home
+      .collection("dailyActivity")
+      .doc(uid)
+      .collection("days")
+      .doc(date);
+    await db.runTransaction(async (t) => {
+      await t.get(ref);
+      const movements = await t.get(
+        home.collection("movements").where("ownerUid", "==", uid),
+      );
+      if (
+        movements.docs.some(
+          (d) => d.data().type === "gasto" && d.data().date === date,
+        )
+      )
+        throw new HttpsError(
+          "failed-precondition",
+          "Ya registraste un gasto de hoy. Tu día ya cuenta.",
+        );
+      t.set(ref, {
+        date,
+        noExpense: true,
+        confirmedAt: new Date().toISOString(),
+      });
     });
     return { ok: true };
   }
@@ -904,6 +949,15 @@ async function handle(
         };
         t.update(dr, { used: [...(draft.used ?? []), m.draftIndex] });
       }
+      if (m.type === "gasto" && m.date === today())
+        t.set(
+          home
+            .collection("dailyActivity")
+            .doc(uid)
+            .collection("days")
+            .doc(m.date),
+          { date: m.date, noExpense: false },
+        );
       t.create(ref, {
         ...m,
         ...aiMetadata,

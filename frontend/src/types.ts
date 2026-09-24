@@ -81,6 +81,12 @@ export interface Schedule {
   active: boolean;
 }
 export interface State {
+  activity: {
+    streak: number;
+    best: number;
+    monthDays: number;
+    todayStatus: "expense" | "no-expense" | "pending";
+  };
   savingsEntries: SavingsEntry[];
   savings: {
     streak: number;

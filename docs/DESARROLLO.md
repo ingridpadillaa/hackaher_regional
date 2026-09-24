@@ -136,3 +136,24 @@ Referencias: [Firebase Hosting](https://firebase.google.com/docs/hosting/), [fun
 ## Perfil y chatbot
 
 Consulta [Perfil, Jami y demostración](JAMI_Y_PERFIL.md) para la edición centralizada de integrantes, el chatbot y la configuración de Gemini. El ingreso mensual se calcula desde los perfiles; no se pide otro monto junto a los permisos.
+
+
+## Racha diaria de constancia
+
+El Simulador muestra `activity`, independiente de la racha histórica de ahorro.
+Cuenta por usuario autenticado: un gasto de hoy guardado hoy (manual, ticket,
+PDF, audio o pago confirmado en agenda), o `confirmNoExpense`. La fecha se
+calcula en el servidor con America/Monterrey. Los registros antiguos o de otro
+integrante no completan el día. Los movimientos bancarios importados no acreditan
+una revisión personal. Abrir la app por sí solo tampoco cuenta.
+
+Las confirmaciones se guardan en
+`hogares/{hogarId}/dailyActivity/{uid}/days/{AAAA-MM-DD}`, sin crear movimientos.
+Un gasto posterior sustituye la confirmación; cada fecha cuenta solo una vez.
+El cálculo utiliza los movimientos existentes, por lo que eliminar un gasto
+retira esa evidencia. La racha admite completar hoy hasta medianoche y conserva
+la mejor secuencia y los días del mes. La tarjeta se refresca al abrir el
+Simulador, recuperar el foco y cada minuto mientras es visible.
+
+Verificación: `npm test` y, con emuladores activos,
+`node backend/scripts/activity-integration.mjs`.

@@ -1,7 +1,8 @@
 import { BankConnect } from "./BankConnect";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Flame,
+  CheckCircle2,
   Plus,
   Target,
   Pencil,
@@ -18,6 +19,39 @@ export function Simulator({
   state: State;
   onSaved: () => Promise<void>;
 }) {
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const activity = state.activity ?? {
+    streak: 0,
+    best: 0,
+    monthDays: 0,
+    todayStatus: "pending",
+  };
+  useEffect(() => {
+    const refresh = () => {
+      if (!document.hidden) void onSaved().catch(() => {});
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 60000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [onSaved]);
+  async function confirmNoExpense() {
+    setReviewBusy(true);
+    setReviewError("");
+    try {
+      await call("confirmNoExpense");
+      await onSaved();
+    } catch (e) {
+      setReviewError(errorMessage(e));
+      await onSaved().catch(() => {});
+    } finally {
+      setReviewBusy(false);
+    }
+  }
   const [editing, setEditing] = useState<Goal | null | undefined>();
   const [targetDate, setTargetDate] = useState("");
   const [entryGoal, setEntryGoal] = useState<Goal | null>(null);
@@ -90,37 +124,66 @@ export function Simulator({
         </div>
       </div>
       <section className="card streak-card">
-        <h2>Tu racha de ahorro</h2>
+        <h2>Tu racha de constancia</h2>
         <div className="streak">
           <div className="flames">
             {Array.from({ length: 5 }, (_, i) => (
-              <span
-                className={i < (state.savings?.streak ?? 0) ? "lit" : ""}
-                key={i}
-              >
+              <span className={i < activity.streak ? "lit" : ""} key={i}>
                 <Flame />
               </span>
             ))}
           </div>
           <div className="streak-count">
-            <strong>{state.savings?.streak ?? 0}</strong>
-            <small>semanas seguidas</small>
+            <strong>{activity.streak}</strong>
+            <small>días seguidos</small>
           </div>
         </div>
-        <p className="helper">
-          Semanas con aportaciones netas positivas registradas por ti. La semana
-          actual puede completarse hasta el domingo. No es verificación
-          bancaria.
+        <p className="streak-caption">
+          Tu constancia cuenta, incluso en los días en que no gastas.
         </p>
-        <p>
-          Esta semana: <strong>{money(state.savings?.weeklyNet ?? 0)}</strong>{" "}
-          en aportaciones menos retiros.
+        <div
+          className="streak-feedback"
+          aria-live="polite"
+          aria-busy={reviewBusy}
+        >
+          {activity.todayStatus === "pending" ? (
+            <>
+              <p className="helper">Aún no has registrado gastos de hoy.</p>
+              <Button
+                className="streak-checkin"
+                disabled={reviewBusy}
+                onClick={confirmNoExpense}
+              >
+                {reviewBusy ? "Confirmando…" : "Hoy no gasté"}
+              </Button>
+            </>
+          ) : (
+            <div className="streak-complete">
+              <CheckCircle2 size={22} aria-hidden="true" />
+              <div>
+                <strong>Hoy ya cumpliste</strong>
+                <p>
+                  {activity.todayStatus === "expense"
+                    ? "Registraste un gasto de hoy. Tu racha se actualizó automáticamente."
+                    : "Confirmaste que hoy no gastaste. ¡Tu revisión también cuenta!"}
+                </p>
+              </div>
+            </div>
+          )}
+          <ErrorText text={reviewError} />
+        </div>
+        <p className="streak-stats">
+          Mejor racha: <b>{activity.best} días</b> · Este mes:{" "}
+          <b>{activity.monthDays} días</b>
         </p>
-        <Button onClick={() => edit(null)}>
-          <Plus />
+      </section>
+      <div className="section-heading between goals-heading">
+        <h2>Tus metas de ahorro</h2>
+        <Button className="secondary" onClick={() => edit(null)}>
+          <Plus size={18} />
           Crear meta
         </Button>
-      </section>
+      </div>
       {state.goals.length ? (
         state.goals.map((g) => {
           const percent = Math.min(100, Math.round((g.saved / g.target) * 100));
@@ -283,7 +346,7 @@ export function Simulator({
         <div>
           <h3>¡Vas muy bien!</h3>
           <p>
-            Mantén tu racha y pronto estarás más cerca de tu meta.{" "}
+            Cada revisión te ayuda a conocer mejor tu dinero.{" "}
             <span className="pink">♥</span>
           </p>
         </div>

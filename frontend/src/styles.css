@@ -2269,3 +2269,75 @@ details p {
   border-bottom: 1px solid var(--line, #e7ded3);
   overflow-wrap: anywhere;
 }
+
+/* Daily review keeps the original flames and counter. */
+.streak-count {
+  flex-shrink: 0;
+}
+.streak-caption {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.streak-feedback {
+  margin-top: 16px;
+}
+.streak-checkin {
+  margin-top: 10px;
+}
+.streak-complete {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 18px;
+  background: #edf5ee;
+  color: #356549;
+}
+.streak-complete > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.streak-complete p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.streak-stats {
+  margin: 16px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+}
+.goals-heading {
+  margin: 22px 0 14px;
+  gap: 12px;
+}
+.goals-heading h2 {
+  font-size: 21px;
+}
+.goals-heading .button {
+  width: auto;
+  flex-shrink: 0;
+  padding: 10px 15px;
+  font-size: 13px;
+}
+@media (max-width: 400px) {
+  .streak {
+    gap: 9px;
+  }
+  .flames {
+    gap: 3px;
+  }
+  .flames > span {
+    width: 35px;
+    height: 47px;
+  }
+  .flames svg {
+    width: 29px;
+    height: 29px;
+  }
+  .streak-count {
+    width: 82px;
+  }
+}
