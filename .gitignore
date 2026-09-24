@@ -31,6 +31,9 @@ summa/app/connectors/fixtures/recorded/
 **/.env
 **/__pycache__/
 **/data/precios.db*
+firebase-debug.log*
+firestore-debug.log*
+.firebase/
 
 # React and Firebase Functions
 node_modules/
