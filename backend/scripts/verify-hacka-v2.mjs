@@ -70,7 +70,7 @@ for (const account of access.accounts) {
     items: state.cart,
     historical: true,
   });
-  assert.equal(offers.length, 4);
+  assert.equal(offers.length, 3);
   assert.ok(offers.some((o) => o.matchedCount > 0));
   const tampicoOffers = await api("compareCart", {
     items: state.cart,
@@ -83,7 +83,7 @@ for (const account of access.accounts) {
       source: "browser",
     },
   });
-  assert.equal(tampicoOffers.length, 4);
+  assert.equal(tampicoOffers.length, 3);
   assert.ok(tampicoOffers.every((o) => o.municipality === "Tampico"));
   assert.ok(tampicoOffers.every((o) => o.distanceKm <= 20));
 }

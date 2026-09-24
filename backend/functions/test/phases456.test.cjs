@@ -34,7 +34,7 @@ test("receipt split reconciles line totals without double counting the receipt",
   assert.match(failed.warning, /descuentos/);
   assert.equal(ruleKey("  CAFÉ  prueba "), ruleKey("cafe prueba"));
 });
-test("four branches compare identical products, missing prices never become zero", () => {
+test("top three branches compare identical products, missing prices never become zero", () => {
   const stores = Array.from({ length: 5 }, (_, i) => ({
     id: "s" + i,
     name: "Branch " + i,
@@ -66,7 +66,7 @@ test("four branches compare identical products, missing prices never become zero
         ]),
   ]);
   const r = compareStores(items, stores, prices, {}, "2026-09-24");
-  assert.equal(r.length, 4);
+  assert.equal(r.length, 3);
   assert.equal(r[0].total, 27);
   assert.equal(
     r.some((s) => s.id === "s0"),

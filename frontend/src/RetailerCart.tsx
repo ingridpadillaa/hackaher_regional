@@ -1,8 +1,14 @@
 import { useRef, useState, useEffect } from "react";
 import { call, errorMessage } from "./firebase";
-import { type CartItem } from "./types";
+import { money, type CartItem } from "./types";
 import { Button, ErrorText } from "./ui";
-export function RetailerCart({ items }: { items: CartItem[] }) {
+export function RetailerCart({
+  items,
+  store,
+}: {
+  items: CartItem[];
+  store?: any;
+}) {
   const [result, setResult] = useState<any>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -12,7 +18,10 @@ export function RetailerCart({ items }: { items: CartItem[] }) {
     setResult(null);
     setError("");
     setBusy(false);
-  }, [items]);
+  }, [items, store?.id]);
+  const isHeb = /\bheb\b|h-e-b/i.test(
+    `${store?.name ?? ""} ${store?.chain ?? ""}`,
+  );
   async function prepare() {
     const current = ++revision.current;
     setBusy(true);
@@ -36,43 +45,71 @@ export function RetailerCart({ items }: { items: CartItem[] }) {
     [],
   );
   return (
-    <section className="card" aria-label="Carrito en H-E-B">
-      <h2>Continuar el mandado en H-E-B</h2>
-      <p>
-        Esta conexión está en validación. Comprobaremos que toda la lista tenga
-        la misma marca y presentación antes de habilitar el envío.
-      </p>
-      <Button
-        className="secondary"
-        busy={busy}
-        disabled={!items.some((i) => i.selected)}
-        onClick={prepare}
-      >
-        Comprobar envío a H-E-B
-      </Button>
-      <ErrorText text={error} />
-      {result && (
+    <section
+      className="card"
+      aria-label={
+        store ? `Opción más barata: ${store.name}` : "Opción más barata"
+      }
+    >
+      <h2>{store ? `Continúa en ${store.name}` : "Opción más barata"}</h2>
+      {!store ? (
+        <p>
+          La tienda más barata aparecerá cuando exista una lista completa con
+          precios utilizables para tu ubicación.
+        </p>
+      ) : (
         <>
-          <p role="status">{result.message}</p>
-          {result.missingIds?.length > 0 && (
-            <ul>
-              {items
-                .filter((i) => result.missingIds.includes(i.id))
-                .map((i) => (
-                  <li key={i.id}>{i.name}</li>
-                ))}
-            </ul>
-          )}
-          {result.ready && result.url && (
+          <p>
+            Es la lista completa con menor total:{" "}
+            <strong>{money(store.total)}</strong>. Confirma existencias y precio
+            final directamente con la tienda.
+          </p>
+          {isHeb ? (
+            <>
+              <Button
+                className="secondary"
+                busy={busy}
+                disabled={!items.some((i) => i.selected)}
+                onClick={prepare}
+              >
+                Comprobar envío a H-E-B
+              </Button>
+              <ErrorText text={error} />
+            </>
+          ) : (
             <a
               className="button"
-              href={result.url}
+              href={store.url}
               target="_blank"
               rel="noopener noreferrer"
-              referrerPolicy="no-referrer"
             >
-              Abrir mi mandado en H-E-B
+              Ver {store.name}
             </a>
+          )}
+          {isHeb && result && (
+            <>
+              <p role="status">{result.message}</p>
+              {result.missingIds?.length > 0 && (
+                <ul>
+                  {items
+                    .filter((i) => result.missingIds.includes(i.id))
+                    .map((i) => (
+                      <li key={i.id}>{i.name}</li>
+                    ))}
+                </ul>
+              )}
+              {result.ready && result.url && (
+                <a
+                  className="button"
+                  href={result.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  referrerPolicy="no-referrer"
+                >
+                  Abrir mi mandado en H-E-B
+                </a>
+              )}
+            </>
           )}
         </>
       )}

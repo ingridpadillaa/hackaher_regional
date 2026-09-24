@@ -2246,12 +2246,6 @@ details p {
   overflow-wrap: anywhere;
   font-size: 17px;
 }
-.store-card.rank-3 {
-  border-color: #8b7aa4;
-}
-.store-card.rank-3 button {
-  background: #77618f;
-}
 .store-card small {
   margin: 8px 0;
 }

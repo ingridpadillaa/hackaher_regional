@@ -140,6 +140,13 @@ export function Cart({
     }
   }
   const count = items.filter((i) => i.selected).length;
+  const cheapestStore = offers
+    .filter((offer) => offer.complete && offer.total !== null)
+    .reduce<any>(
+      (cheapest, offer) =>
+        !cheapest || offer.total < cheapest.total ? offer : cheapest,
+      null,
+    );
   return (
     <main className="page cart-page">
       <header className="center-title">
@@ -317,7 +324,7 @@ export function Cart({
       <div className="section-heading comparison-title">
         <BarChart3 className="pink" />
         <div>
-          <h2>Compara hasta 4 sucursales</h2>
+          <h2>Top 3 de supermercados</h2>
           <p>Mismos productos y presentaciones, con fuente y fecha</p>
         </div>
       </div>
@@ -331,7 +338,7 @@ export function Cart({
       ) : (
         <>
           <div className="store-grid">
-            {offers.map((s, i) => (
+            {offers.slice(0, 3).map((s, i) => (
               <article className={"store-card rank-" + i} key={s.id}>
                 <span className="rank">{s.complete ? i + 1 : "—"}</span>
                 <h3>{s.name}</h3>
@@ -342,11 +349,9 @@ export function Cart({
                       <small> MXN</small>
                     </strong>
                     <span>
-                      {s.historical
-                        ? "Comparación histórica · no vigente"
-                        : sort === "price" && i === 0
-                          ? "Menor total entre listas completas"
-                          : "Lista completa"}
+                      {sort === "price" && i === 0
+                        ? "Menor total entre listas completas"
+                        : "Lista completa"}
                     </span>
                     <small>Referencia · {s.date}</small>
                   </>
@@ -390,7 +395,7 @@ export function Cart({
           </p>
         </>
       )}
-      <RetailerCart items={items} />
+      <RetailerCart items={items} store={cheapestStore} />
       {selectedStore && (
         <Modal
           title={`Tu lista para ${selectedStore.name}`}

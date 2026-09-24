@@ -98,7 +98,7 @@ export function compareStores(
         a.name.localeCompare(b.name)
       );
     })
-    .slice(0, 4);
+    .slice(0, 3);
 }
 export async function catalogStores(db: any, area: any) {
   // Reverse geocoding always supplies the municipality. Querying the whole
