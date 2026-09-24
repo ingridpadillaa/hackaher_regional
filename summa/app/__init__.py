@@ -1,6 +1,5 @@
 import hmac
 import importlib
-import os
 
 from flask import Flask, abort, g, render_template, request
 from itsdangerous import BadSignature, URLSafeTimedSerializer
@@ -13,7 +12,7 @@ from .services.firestore_repo import Repository
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
-    app.config.update(settings())
+    app.config.update(settings(load_file=not (test_config or {}).get("TESTING")))
     if test_config:
         app.config.update(test_config)
     from io import BytesIO
@@ -27,13 +26,14 @@ def create_app(test_config=None):
     app.request_class = MemoryRequest
     try:
         if app.config["DATA_BACKEND"] == "firestore":
-            import firebase_admin
+            from .services.firebase_admin_client import initialize
 
-            if not firebase_admin._apps:
-                firebase_admin.initialize_app(options={"projectId": os.getenv("FIREBASE_PROJECT_ID")})
+            app.extensions["firebase_admin"] = initialize(app.config)
         app.extensions["repo"] = Repository(app)
     except Exception:
-        app.logger.error("No se pudo inicializar Firestore; revisa ADC y FIREBASE_PROJECT_ID.")
+        app.logger.error(
+            "No se pudo inicializar Firestore; revisa ADC, GOOGLE_APPLICATION_CREDENTIALS y FIREBASE_PROJECT_ID."
+        )
     from .health import check
 
     check(app)
@@ -66,6 +66,7 @@ def create_app(test_config=None):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
         response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=(self)"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com; frame-src https://*.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self' https://www.chedraui.com.mx"
@@ -73,7 +74,7 @@ def create_app(test_config=None):
 
         if not request.path.startswith("/static/"):
             response.headers["Cache-Control"] = "no-store"
-        if not app.config["DEMO_MODE"]:
+        if app.config["SESSION_COOKIE_SECURE"]:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
@@ -90,7 +91,10 @@ def create_app(test_config=None):
         return dict(
             unread_notifications=unread,
             donation_url=donation_url(),
-            local_mode=app.config.get("LOCAL_MODE") or app.config.get("TESTING"),
+            firebase_config=app.config["FIREBASE_WEB_CONFIG"],
+            gemini_status=app.extensions.get("gemini_status", {}),
+            local_mode=app.config.get("LOCAL_MODE")
+            or (app.config.get("TESTING") and not app.config.get("TEST_FIREBASE_AUTH")),
             demo_mode=app.config["DEMO_MODE"],
             today=local_today().isoformat(),
         )

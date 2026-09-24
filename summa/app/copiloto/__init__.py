@@ -29,8 +29,10 @@ def choose_tools(message):
 
 
 def gemini_calls(message):
-    from google import genai
     from google.genai import types
+
+    from app.services.gemini_connection import client as connect
+    from app.services.gemini_connection import model_name
 
     specs = {
         "obtener_resumen": {"periodo": {"type": "STRING", "enum": ["semana", "quincena", "mes"]}},
@@ -88,19 +90,19 @@ def gemini_calls(message):
         )
         for name, props in specs.items()
     ]
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options=types.HttpOptions(timeout=8000))
-    # Model selects read-only functions. All displayed figures are rendered by Python,
-    # so generated prose cannot fabricate financial values.
-    response = client.models.generate_content(
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
-        contents=message,
-        config=types.GenerateContentConfig(
-            system_instruction="Selecciona herramientas para responder en español. No inventes parámetros faltantes. No pidas contraseñas ni recomiendes productos de inversión. No tienes identidad ni cuentas del usuario.",
-            tools=[types.Tool(function_declarations=declarations)],
-            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-            temperature=0,
-        ),
-    )
+    with connect() as client:
+        # Model selects read-only functions. All displayed figures are rendered by Python,
+        # so generated prose cannot fabricate financial values.
+        response = client.models.generate_content(
+            model=model_name(),
+            contents=message,
+            config=types.GenerateContentConfig(
+                system_instruction="Selecciona herramientas para responder en español. No inventes parámetros faltantes. No pidas contraseñas ni recomiendes productos de inversión. No tienes identidad ni cuentas del usuario.",
+                tools=[types.Tool(function_declarations=declarations)],
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+                temperature=0,
+            ),
+        )
     calls = []
     for call in (response.function_calls or [])[:3]:
         if call.name in TOOL_NAMES:

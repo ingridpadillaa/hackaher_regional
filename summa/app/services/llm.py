@@ -36,30 +36,43 @@ def redact(text):
 
 class GeminiClient:
     def extract(self, prompt, schema, media=None, mime=None):
-        from google import genai
         from google.genai import types
+
+        from .gemini_connection import client as connect
+        from .gemini_connection import model_name
 
         if not os.getenv("GEMINI_API_KEY"):
             raise ExtractionUnavailable("Jami no está disponible en este momento. Puedes capturar a mano.")
-        client = genai.Client(
-            api_key=os.environ["GEMINI_API_KEY"], http_options=types.HttpOptions(timeout=8000)
-        )
+        from flask import current_app, has_app_context
+
+        if has_app_context() and current_app.extensions.get("gemini_status", {}).get("ok") is False:
+            raise ExtractionUnavailable("Jami no está disponible en este momento. Puedes capturar a mano.")
+        try:
+            selected_model = model_name()
+            client = connect(vision=bool(media))
+        except ValueError as error:
+            raise ExtractionUnavailable(str(error)) from None
         contents = [redact(prompt)]
         if media:
             contents.append(types.Part.from_bytes(data=media, mime_type=mime))
         for _ in range(2):
             try:
                 response = client.models.generate_content(
-                    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+                    model=selected_model,
                     contents=contents,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json", response_schema=schema, temperature=0
                     ),
                 )
-                return schema.model_validate_json(response.text)
+                parsed = schema.model_validate_json(response.text)
+                client.close()
+                return parsed
             except Exception:
                 continue
-        raise ExtractionUnavailable("No pudimos leerlo con confianza. Intenta otra vez o usa captura manual.")
+        client.close()
+        raise ExtractionUnavailable(
+            "Jami no está disponible en este momento. No pudimos leerlo con confianza; usa captura manual."
+        )
 
 
 class OpenAIClient:

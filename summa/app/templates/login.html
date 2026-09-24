@@ -51,6 +51,7 @@
                     <button>Iniciar sesión</button>
                     <button type="button" id="register" class="secondary">Crear cuenta</button>
                     <button type="button" id="google" class="secondary">Continuar con Google</button>
+                    <button type="button" id="reset-password" class="secondary">Olvidé mi contraseña</button>
                 </form>
                 <p id="auth-error" role="alert"></p>
             {% endif %}
@@ -62,10 +63,4 @@
             </p>
         </section>
     </section>
-{% endblock %}
-{% block scripts %}
-    {% if not local_mode %}
-        <script type="module" src="/static/auth.js"></script>
-        <script type="application/json" id="firebase-config">{{ firebase_config|tojson }}</script>
-    {% endif %}
 {% endblock %}

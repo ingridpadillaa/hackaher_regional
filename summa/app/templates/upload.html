@@ -3,6 +3,7 @@
     <section class="card form-card">
         <span class="eyebrow">MENOS CAPTURA, MÁS VIDA</span>
         {% include "register_method.html" %}
+        {% if gemini_status.get('ok') is sameas false and (g.user.get('rol')=='admin' or local_mode) %}<p class="notice" role="alert">{{ gemini_status.message }}</p>{% endif %}
         <p>Revisa cada dato antes de guardarlo. Tú tienes la última palabra.</p>
         <form method="post"
               action="/movimientos/importar/{{ kind }}"

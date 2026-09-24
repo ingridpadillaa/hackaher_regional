@@ -14,7 +14,7 @@ class Repository:
         if self.remote:
             from firebase_admin import firestore
 
-            self.db = firestore.client()
+            self.db = firestore.client(app=app.extensions.get("firebase_admin"))
         else:
             if not (app.config.get("LOCAL_MODE") or app.config.get("TESTING")):
                 raise RuntimeError("Producción requiere Firestore")

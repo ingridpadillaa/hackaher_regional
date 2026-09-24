@@ -36,6 +36,9 @@
                 <div class="demo-strip">Banco de prueba habilitado · sus movimientos se identifican como Datos de prueba</div>
             {% endif %}
             <main>
+                {% if g.user and gemini_status.get('ok') is sameas false %}
+                    <p class="notice" role="status">Jami no está disponible en este momento. Puedes registrar gastos manualmente.</p>
+                {% endif %}
                 {% for message in get_flashed_messages() %}
                     <div class="notice" role="status">{{ message }}</div>
                 {% endfor %}
@@ -83,6 +86,10 @@
                 Hecho para cuidar lo que importa. <a href="/privacidad">Privacidad</a>
             </footer>
         </div>
+        {% if not local_mode and firebase_config.get('apiKey') and firebase_config.get('appId') %}
+            <script type="application/json" id="firebase-config">{{ firebase_config|tojson }}</script>
+            <script type="module" src="/static/auth.js"></script>
+        {% endif %}
         {% block scripts %}{% endblock %}
     </body>
 </html>

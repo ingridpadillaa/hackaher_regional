@@ -16,7 +16,9 @@ def login_required(view):
     def wrapped(*args, **kwargs):
         cookie = request.cookies.get("__session")
         try:
-            if current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING"):
+            if current_app.config.get("LOCAL_MODE") or (
+                current_app.config.get("TESTING") and not current_app.config.get("TEST_FIREBASE_AUTH")
+            ):
                 uid = URLSafeTimedSerializer(current_app.secret_key, salt="demo").loads(
                     cookie or "", max_age=432000
                 )["uid"]
@@ -38,20 +40,20 @@ def login_required(view):
             "auth.logout",
             "perfil.privacy",
         ):
-            return redirect(url_for("inicio.onboarding"))
+            return redirect("/onboarding")
         return view(*args, **kwargs)
 
     return wrapped
 
 
-def session_response(value):
-    response = jsonify(ok=True, next="/")
+def session_response(value, next_path="/"):
+    response = jsonify(ok=True, next=next_path)
     response.set_cookie(
         "__session",
         value,
         max_age=432000,
         httponly=True,
-        secure=not (current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING")),
+        secure=current_app.config["SESSION_COOKIE_SECURE"],
         samesite="Lax",
     )
     return response
@@ -64,13 +66,15 @@ def login():
 
 @bp.post("/session")
 def create_session():
-    if current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING"):
+    if current_app.config.get("LOCAL_MODE") or (
+        current_app.config.get("TESTING") and not current_app.config.get("TEST_FIREBASE_AUTH")
+    ):
         abort(404)
     from firebase_admin import auth
 
     try:
         token = request.get_json()["token"]
-        claims = auth.verify_id_token(token)
+        claims = auth.verify_id_token(token, check_revoked=True)
         if time.time() - claims["auth_time"] > 300:
             abort(401)
         cookie = auth.create_session_cookie(token, expires_in=timedelta(days=5))
@@ -83,16 +87,22 @@ def create_session():
                     "email": claims.get("email", ""),
                     "hogarId": None,
                     "rol": "admin",
+                    "personalizacionCompleta": False,
                 },
             )
-        return session_response(cookie)
+        user = repo().get(f"usuarios/{uid}")
+        target = "/" if user.get("hogarId") and user.get("personalizacionCompleta") else "/onboarding"
+        return session_response(cookie, target)
     except Exception:
         abort(401)
 
 
 @bp.post("/demo")
 def demo():
-    if not (current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING")):
+    if not (
+        current_app.config.get("LOCAL_MODE")
+        or (current_app.config.get("TESTING") and not current_app.config.get("TEST_FIREBASE_AUTH"))
+    ):
         abort(404)
     name = request.form.get("name", "").strip()[:80]
     if not name:

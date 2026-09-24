@@ -16,3 +16,6 @@ Pendientes externos:
 - No se repitió la revisión visual en Chrome: la ejecución anterior del navegador fue rechazada. No se afirma validación visual de esta migración.
 
 Las estimaciones son de planificación. La personalización pide confirmar un monto para la meta; no inventa un costo de viaje/escuela. El historial de chat se mantiene en sessionStorage y se elimina al cerrar sesión.
+
+## Integración Firebase/Gemini
+Se agregó inicialización única Admin con archivo/ADC, variables web separadas, recuperación de contraseña, Gemini con modelo configurable y validación de disponibilidad, y scripts/check_connections.py. El archivo .env no se encontró en las raíces comprobadas; la verificación real queda pendiente de su ruta. No se copiarán las claves del chat a archivos. Ver docs/CONEXIONES.md para pasos exactos.

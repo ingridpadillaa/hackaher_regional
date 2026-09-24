@@ -7,8 +7,27 @@ instance/
 *.sqlite*
 .DS_Store
 service-account*.json
-cochinito/app/connectors/fixtures/recorded/
+summa/app/connectors/fixtures/recorded/
 
 *.db
 *service-account*.json
 *credentials*.json
+
+# JSON is private by default; allow only versioned application catalogs/config.
+*.json
+!/summa/app/connectors/fixtures/bank.json
+!/summa/app/static/manifest.json
+!/summa/data/categorias.json
+!/summa/data/demo.json
+!/summa/data/pagos.json
+!/summa/data/presupuesto_base.json
+!/summa/data/supermercados.json
+!/summa/data/temporadas.json
+!/summa/firebase.json
+!/summa/firestore.indexes.json
+
+.env.*
+!.env.example
+**/.env
+**/__pycache__/
+**/data/precios.db*
