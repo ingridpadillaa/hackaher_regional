@@ -22,6 +22,7 @@ export function MovementModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const [receipt, setReceipt] = useState<any>(null);
   const [incomeKind, setIncomeKind] = useState<"regular" | "extra">("extra");
   const [type, setType] = useState<"gasto" | "ingreso">("gasto");
   const [method, setMethod] = useState<Movement["method"]>("manual");
@@ -159,6 +160,7 @@ export function MovementModal({
       return;
     }
     setFile(f);
+    setReceipt(null);
     setDrafts([]);
     setError("");
   }
@@ -181,11 +183,17 @@ export function MovementModal({
       const result = await call("analyze", payload);
       setTranscript(result.transcript || transcript);
       setDraftId(result.draftId);
-      setAnalysisWarning(result.warning || "");
+      setReceipt(result.receipt ?? null);
+      setAnalysisWarning(
+        [result.warning, ...(result.missingFields ?? [])]
+          .filter(Boolean)
+          .join(" "),
+      );
       setDrafts(
         result.movements.map((m: Movement, i: number) => ({
           ...m,
           method,
+          learnCategory: true,
           requestId: crypto.randomUUID(),
           draftIndex: i,
         })),
@@ -465,6 +473,26 @@ export function MovementModal({
             {drafts.length > 0 && (
               <section className="analysis-result">
                 <h3>Revisa antes de guardar</h3>
+                {receipt && (
+                  <details>
+                    <summary>
+                      Desglose del ticket ·{" "}
+                      {receipt.total === null
+                        ? "Total no legible"
+                        : money(receipt.total)}
+                    </summary>
+                    {receipt.items.map((item: any, i: number) => (
+                      <p key={i}>
+                        {item.quantity} × {item.name} · {money(item.amount)} ·{" "}
+                        {item.category}
+                      </p>
+                    ))}
+                    <p>
+                      Total que confirmarás:{" "}
+                      {money(drafts.reduce((n, m) => n + m.amount, 0))}
+                    </p>
+                  </details>
+                )}
                 <p className="helper">
                   Gemini sugirió estas categorías. Puedes cambiarlas o descartar
                   movimientos; solo se guardan cuando confirmas.
@@ -490,12 +518,100 @@ export function MovementModal({
                         ))}
                       </select>
                     </Field>
-                    <strong>
-                      {m.type === "ingreso" ? "+" : "−"}
-                      {money(m.amount)}
-                    </strong>
-                    <span>{m.note}</span>
-                    <small>{m.date}</small>
+                    <Field label={`Monto del movimiento ${i + 1}`}>
+                      <input
+                        disabled={busy}
+                        required
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={m.amount}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((v, j) =>
+                              j === i
+                                ? { ...v, amount: Number(e.target.value) }
+                                : v,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field label={`Fecha del movimiento ${i + 1}`}>
+                      <input
+                        disabled={busy}
+                        required
+                        type="date"
+                        max={date}
+                        value={m.date}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((v, j) =>
+                              j === i ? { ...v, date: e.target.value } : v,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field label={`Nota del movimiento ${i + 1}`}>
+                      <input
+                        disabled={busy}
+                        maxLength={400}
+                        value={m.note}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((v, j) =>
+                              j === i ? { ...v, note: e.target.value } : v,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
+                    {m.ruleApplied && (
+                      <small>
+                        Categoría aprendida de una corrección de tu hogar.
+                      </small>
+                    )}
+                    <label className="check-line">
+                      <input
+                        disabled={busy}
+                        type="checkbox"
+                        checked={m.learnCategory ?? true}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((v, j) =>
+                              j === i
+                                ? { ...v, learnCategory: e.target.checked }
+                                : v,
+                            ),
+                          )
+                        }
+                      />
+                      <span>Recordar mi corrección para esta descripción.</span>
+                    </label>
+                    {m.possibleDuplicate && (
+                      <label className="check-line duplicate-warning">
+                        <input
+                          required
+                          disabled={busy}
+                          type="checkbox"
+                          checked={m.allowDuplicate ?? false}
+                          onChange={(e) =>
+                            setDrafts((current) =>
+                              current.map((v, j) =>
+                                j === i
+                                  ? { ...v, allowDuplicate: e.target.checked }
+                                  : v,
+                              ),
+                            )
+                          }
+                        />
+                        <span>
+                          Posible duplicado. Revisé el historial y confirmo que
+                          es otro movimiento.
+                        </span>
+                      </label>
+                    )}
                     <button
                       type="button"
                       className="text-button"

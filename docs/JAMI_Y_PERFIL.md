@@ -1,5 +1,7 @@
 # Perfil, Jami y demostración
 
+> Referencia histórica. Para el modelo vigente consulta MODELO_DATOS.md; ubicación e invitaciones en IA_UBICACION_CATALOGO.md. La demo actualizada de fase 7 es [Hacka](FASE_7_DEMO_HACKA.md), aislada en emuladores; la demo Hack descrita abajo se conserva.
+
 ## Perfil
 
 Selecciona una persona dentro de **Tu hogar** para editar nombre, edad, estudios, ocupación, ingreso y periodicidad. Elimina perfiles desde ese mismo editor, con confirmación. Solo administra el hogar su propietario; el perfil administrador se conserva. Al eliminar un perfil con cuenta vinculada se retira su acceso al hogar, sin borrar la cuenta de Authentication ni los movimientos históricos.

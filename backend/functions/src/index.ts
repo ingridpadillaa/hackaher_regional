@@ -3,7 +3,8 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { defineJsonSecret } from "firebase-functions/params";
-import { bankSession, syncBank, type IntegrationSecrets } from "./banking";
+import { type IntegrationSecrets } from "./banking";
+import { privateBankAction } from "./bank-private";
 import { extractMovements } from "./extraction";
 import { replyToChat } from "./jami";
 import {
@@ -14,7 +15,12 @@ import {
   ledgerSummary,
   savingsStats,
 } from "./finance";
-import { randomBytes } from "node:crypto";
+import { compareStores, catalogStores } from "./catalog";
+import { prepareHebCart } from "./retailer-cart";
+import { normalize } from "./location";
+import { locationSchema } from "./location";
+import { ruleKey } from "./receipts";
+import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
   categories,
@@ -49,11 +55,6 @@ const rows = async (ref: any) => {
   const s = await ref.get();
   return s.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 };
-const stores = [
-  { id: "aurrera", name: "Aurrera", url: "https://www.bodegaaurrera.com.mx/" },
-  { id: "walmart", name: "Walmart", url: "https://www.walmart.com.mx/" },
-  { id: "heb", name: "H-E-B", url: "https://www.heb.com.mx/" },
-];
 async function context(uid: string) {
   const u = await db.doc(`usuarios/${uid}`).get();
   const user = u.data();
@@ -146,6 +147,19 @@ async function monthReport(home: any, uid: string, month: string) {
     summary: ledgerSummary(movements, budget.data()?.amount ?? 0),
   };
 }
+async function invitationExpiry(home: any, code: string) {
+  const ref = db.doc(`invitations/${code}`);
+  return db.runTransaction(async (t) => {
+    const snap = await t.get(ref);
+    const inv = snap.data();
+    if (!inv || inv.revoked) return null;
+    if (inv.expiresAt) return inv.expiresAt;
+    const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString();
+    t.update(ref, { expiresAt, revoked: false });
+    t.update(home, { invitationExpiresAt: expiresAt });
+    return expiresAt;
+  });
+}
 async function bootstrap(uid: string, name: string, email: string) {
   const ref = db.doc(`usuarios/${uid}`);
   await db.runTransaction(async (t) => {
@@ -162,6 +176,7 @@ async function bootstrap(uid: string, name: string, email: string) {
   if (!user.hogarId) return { user, home: null };
   const { home, data } = await context(uid);
   await ensureFinanceSchema(home);
+  const invitationExpiresAt = await invitationExpiry(home, data.invitationCode);
   // New React schema intentionally separate from legacy Python collections.
   const [members, goals, bankEvidence, notifications] = await Promise.all([
     rows(home.collection("members")),
@@ -241,10 +256,21 @@ async function bootstrap(uid: string, name: string, email: string) {
       (n.kind !== "goal" || data.preferences?.goals !== false) &&
       (n.kind !== "donation" || data.preferences?.donations === true),
   );
-  const bankConnection = (await db.doc(`bankConnections/${uid}`).get()).data();
+  const liveBank = (
+    await db.doc(`privateBankConnections/${uid}/modes/live`).get()
+  ).data();
+  const sandboxBank = (
+    await db.doc(`privateBankConnections/${uid}/modes/sandbox`).get()
+  ).data();
   return {
     user,
-    home: { id: home.id, ...data, schemaVersion: 2, members },
+    home: {
+      id: home.id,
+      ...data,
+      schemaVersion: 2,
+      invitationExpiresAt,
+      members,
+    },
     movements: visible(movements),
     goals,
     savingsEntries,
@@ -259,13 +285,13 @@ async function bootstrap(uid: string, name: string, email: string) {
       read: read.includes(n.id),
     })),
     bank: {
-      connected: data.bankStatus === "connected",
-      sandbox: bankConnection?.sandbox === true,
-      sandboxConnected: bankConnection?.connected === true,
-      sandboxAccountCount: bankConnection?.accountCount ?? 0,
-      sandboxTransactionCount: bankConnection?.transactionCount ?? 0,
-      sandboxLastSync: bankConnection?.lastSync ?? null,
-      lastSync: data.lastBankSync ?? null,
+      connected: liveBank?.connected === true && !liveBank?.revoking,
+      sandbox: sandboxBank?.connected === true && !liveBank?.connected,
+      sandboxConnected: sandboxBank?.connected === true,
+      sandboxAccountCount: sandboxBank?.accountCount ?? 0,
+      sandboxTransactionCount: sandboxBank?.transactionCount ?? 0,
+      sandboxLastSync: sandboxBank?.lastSync ?? null,
+      lastSync: liveBank?.lastSync ?? null,
       streak: verifiedStreak(bankEvidence, date),
     },
     date,
@@ -279,10 +305,52 @@ async function analyze(uid: string, input: any) {
       "Este hogar no autorizó el uso de IA durante su registro. Puedes usar captura manual.",
     );
   await rateLimit(uid, "ai", 5);
-  const result = await extractMovements(input, integrations.value(), today());
+  const extracted = await extractMovements(
+    input,
+    integrations.value(),
+    today(),
+  );
+  const result = {
+    ...extracted,
+    movements: extracted.movements.map((m) => ({
+      ...m,
+      ruleApplied: false,
+      possibleDuplicate: false,
+    })),
+  };
+  const sourceHash = createHash("sha256")
+    .update(input.base64 ?? input.text ?? "")
+    .digest("hex");
+  const previousSource = await home
+    .collection("analyzedSources")
+    .doc(sourceHash)
+    .get();
+  const recent = await rows(
+    home.collection("movements").orderBy("date", "desc").limit(500),
+  );
+  for (const movement of result.movements) {
+    const rule = movement.note
+      ? await home.collection("categoryRules").doc(ruleKey(movement.note)).get()
+      : null;
+    if (rule?.exists) {
+      movement.category = rule.data()!.category;
+      movement.ruleApplied = true;
+    }
+    movement.possibleDuplicate =
+      previousSource.exists ||
+      recent.some(
+        (m: any) =>
+          (!m.private || m.ownerUid === uid) &&
+          m.date === movement.date &&
+          m.type === movement.type &&
+          m.amount === movement.amount &&
+          ruleKey(m.note ?? "") === ruleKey(movement.note ?? ""),
+      );
+  }
   const draft = home.collection("drafts").doc();
   await draft.set({
     ...result,
+    sourceHash,
     method: input.method,
     model: integrations.value().geminiModel,
     ownerUid: uid,
@@ -309,11 +377,33 @@ async function handle(
       .parse(p.history);
     return replyToChat(message, state, integrations.value(), history);
   }
+  if (action === "previewInvitation") {
+    const code = z
+      .string()
+      .trim()
+      .regex(/^(?:[A-F0-9]{16}|[A-F0-9]{32})$/)
+      .parse(p.code);
+    await rateLimit(uid, "invite-preview", 10);
+    const inv = (await db.doc(`invitations/${code}`).get()).data();
+    if (
+      !inv ||
+      inv.revoked ||
+      !inv.expiresAt ||
+      Date.parse(inv.expiresAt) <= Date.now()
+    )
+      throw new HttpsError(
+        "not-found",
+        "La invitación caducó o fue revocada. Solicita una nueva.",
+      );
+    const h = (await db.doc(`hogares/${inv.homeId}`).get()).data();
+    if (!h) throw new HttpsError("not-found", "Hogar no encontrado.");
+    return { name: h.name, expiresAt: inv.expiresAt };
+  }
   if (action === "createHome") {
     const parsed = homeSchema.parse(p);
     const ref = db.doc(`usuarios/${uid}`);
     const home = db.collection("hogares").doc();
-    const code = randomBytes(8).toString("hex").toUpperCase();
+    const code = randomBytes(16).toString("hex").toUpperCase();
     await db.runTransaction(async (t) => {
       const u = await t.get(ref);
       if (u.data()?.hogarId)
@@ -346,6 +436,8 @@ async function handle(
       t.create(db.doc(`invitations/${code}`), {
         homeId: home.id,
         createdBy: uid,
+        expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+        revoked: false,
       });
     });
     return { ok: true };
@@ -354,7 +446,7 @@ async function handle(
     const code = z
       .string()
       .trim()
-      .regex(/^[A-F0-9]{16}$/)
+      .regex(/^(?:[A-F0-9]{16}|[A-F0-9]{32})$/)
       .parse(p.code);
     await rateLimit(uid, "join", 5);
     await db.runTransaction(async (t) => {
@@ -363,8 +455,16 @@ async function handle(
       if (u.data()?.hogarId)
         throw new HttpsError("already-exists", "Ya perteneces a un hogar.");
       const inv = await t.get(db.doc(`invitations/${code}`));
-      if (!inv.exists)
-        throw new HttpsError("not-found", "Código no encontrado.");
+      if (
+        !inv.exists ||
+        inv.data()?.revoked ||
+        !inv.data()?.expiresAt ||
+        Date.parse(inv.data()!.expiresAt) <= Date.now()
+      )
+        throw new HttpsError(
+          "not-found",
+          "La invitación caducó o fue revocada. Solicita una nueva.",
+        );
       const h = db.doc(`hogares/${inv.data()!.homeId}`);
       const hs = await t.get(h);
       const members = await t.get(h.collection("members"));
@@ -394,6 +494,47 @@ async function handle(
   }
   if (action === "analyze") return analyze(uid, p);
   const { home, data, user } = await context(uid);
+  if (action === "rotateInvitation" || action === "revokeInvitation") {
+    if (data.ownerUid !== uid)
+      throw new HttpsError(
+        "permission-denied",
+        "Solo quien administra puede gestionar invitaciones.",
+      );
+    await db.runTransaction(async (t) => {
+      const h = await t.get(home);
+      const old = h.data()!.invitationCode;
+      t.set(db.doc(`invitations/${old}`), { revoked: true }, { merge: true });
+      if (action === "rotateInvitation") {
+        const code = randomBytes(16).toString("hex").toUpperCase();
+        const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString();
+        t.create(db.doc(`invitations/${code}`), {
+          homeId: home.id,
+          createdBy: uid,
+          expiresAt,
+          revoked: false,
+        });
+        t.update(home, {
+          invitationCode: code,
+          invitationExpiresAt: expiresAt,
+        });
+      } else t.update(home, { invitationExpiresAt: null });
+    });
+    return { ok: true };
+  }
+  if (action === "saveLocation") {
+    if (data.ownerUid !== uid)
+      throw new HttpsError(
+        "permission-denied",
+        "Solo quien administra puede cambiar la zona del hogar.",
+      );
+    const location = locationSchema.parse(p);
+    await home.update({
+      location,
+      "preferences.municipality": location.municipality,
+    });
+    return { ok: true };
+  }
+
   if (action === "deleteMember") {
     const memberId = id.parse(p.memberId);
     if (data.ownerUid !== uid)
@@ -439,13 +580,20 @@ async function handle(
   if (action === "savePreferences") {
     const locked = data.personalized
       ? {
-          municipality: data.preferences.municipality,
           privacyAccepted: data.preferences.privacyAccepted,
           aiConsent: data.preferences.aiConsent,
           bankConsent: data.preferences.bankConsent,
         }
       : {};
     const parsed = preferencesSchema.parse({ ...p, ...locked });
+    if (
+      p.location &&
+      locationSchema.parse(p.location).municipality !== parsed.municipality
+    )
+      throw new HttpsError(
+        "invalid-argument",
+        "La zona y el municipio deben coincidir.",
+      );
     if (data.ownerUid !== uid)
       throw new HttpsError(
         "permission-denied",
@@ -476,6 +624,7 @@ async function handle(
       );
     }
     batch.update(home, {
+      ...(p.location ? { location: locationSchema.parse(p.location) } : {}),
       preferences: {
         ...preferences,
         assistantTone: "cercano",
@@ -705,6 +854,33 @@ async function handle(
             "already-exists",
             "Este movimiento ya fue guardado.",
           );
+        const sourceRef = home
+          .collection("analyzedSources")
+          .doc(draft.sourceHash ?? m.draftId);
+        const prior = await t.get(sourceRef);
+        if (
+          (draft.movements[m.draftIndex].possibleDuplicate ||
+            (prior.exists && prior.data()?.draftId !== m.draftId)) &&
+          !m.allowDuplicate
+        )
+          throw new HttpsError(
+            "already-exists",
+            "Este comprobante podría estar duplicado. Revisa y confirma si es otro gasto.",
+          );
+        if (
+          m.learnCategory &&
+          m.note.trim() &&
+          m.category !== draft.movements[m.draftIndex].category
+        )
+          t.set(home.collection("categoryRules").doc(ruleKey(m.note)), {
+            category: m.category,
+            updatedBy: uid,
+            updatedAt: new Date().toISOString(),
+          });
+        t.set(sourceRef, {
+          draftId: m.draftId,
+          updatedAt: new Date().toISOString(),
+        });
         aiMetadata = {
           suggestedCategory: draft.movements[m.draftIndex].category,
           categoryConfirmed: true,
@@ -765,6 +941,22 @@ async function handle(
       });
     return { ok: true };
   }
+  if (action === "prepareRetailerCart") {
+    z.literal("heb").parse(p.retailer);
+    const items = cartSchema.parse(p.items);
+    const config = (await db.doc("retailerIntegrations/heb").get()).data();
+    const selected = items.filter((i) => i.selected);
+    const mappings = selected.length
+      ? await db.getAll(
+          ...selected.map((i) => db.doc(`retailerProductMappings/heb_${i.id}`)),
+        )
+      : [];
+    return prepareHebCart(
+      items,
+      mappings.filter((m) => m.exists).map((m) => m.data()),
+      config,
+    );
+  }
   if (action === "saveCart") {
     await home
       .collection("cart")
@@ -776,98 +968,93 @@ async function handle(
     return { ok: true };
   }
   if (action === "searchProducts") {
-    const term = z
-      .string()
-      .trim()
-      .min(2)
-      .max(80)
-      .parse(p.term)
-      .toLocaleLowerCase("es-MX");
-    const products = await rows(
+    const term = normalize(z.string().trim().min(2).max(100).parse(p.term));
+    const tokens = term.split(" ");
+    const result = await rows(
       db
-        .collection("products")
+        .collection("catalogProducts")
+        .where("searchTokens", "array-contains", tokens[0])
+        .limit(100),
+    );
+    if (result.length)
+      return result
+        .filter((r: any) =>
+          tokens.every((token) => r.searchName.includes(token)),
+        )
+        .slice(0, 20);
+    return rows(
+      db
+        .collection("catalogProducts")
         .orderBy("searchName")
         .startAt(term)
         .endAt(term + "\uf8ff")
-        .limit(15),
+        .limit(20),
     );
-    return products;
   }
   if (action === "compareCart") {
-    const items = cartSchema.parse(p.items).filter((x) => x.selected);
+    const items = cartSchema.parse(p.items).filter((i) => i.selected);
     if (!items.length) return [];
-    const offers = await Promise.all(
-      stores.map(async (store) => {
-        let total = 0;
-        let complete = true;
-        let oldest = today();
-        let allLinks = true;
-        const productLinks: any[] = [];
-        for (const item of items) {
-          const snap = await db.doc(`products/${item.id}`).get();
-          const product = snap.data();
-          const offer = product?.offers?.[store.id];
-          if (
-            !offer ||
-            !Number.isFinite(offer.price) ||
-            !offer.date ||
-            !offer.source ||
-            offer.municipality !== data.preferences?.municipality ||
-            Date.now() - Date.parse(offer.date) > 30 * 86400000
-          ) {
-            complete = false;
-            continue;
-          }
-          total += offer.price * item.quantity;
-          oldest = offer.date < oldest ? offer.date : oldest;
-          const validUrl = (url: string) => {
-            try {
-              const u = new URL(url);
-              return (
-                u.protocol === "https:" &&
-                u.hostname === new URL(store.url).hostname
-              );
-            } catch {
-              return false;
-            }
-          };
-          if (offer.productUrl && validUrl(offer.productUrl))
-            productLinks.push({
-              name: item.name,
-              url: offer.productUrl,
-              quantity: item.quantity,
-            });
-          else allLinks = false;
-        }
-        // Retailer checkout integrations require a verified contract; a store homepage is never labeled a populated cart.
-        return {
-          ...store,
-          total: complete ? round(total) : null,
-          date: complete ? oldest : null,
-          complete,
-          productLinks,
-          cartReady: false,
-          allLinks,
-        };
-      }),
+    const area = locationSchema.parse(
+      p.area ??
+        data.location ?? {
+          municipality: data.preferences?.municipality,
+          state: "",
+          source: "manual",
+        },
     );
-    return offers.sort((a, b) => (a.total ?? Infinity) - (b.total ?? Infinity));
+    const historical = z.boolean().default(false).parse(p.historical);
+    const sort = z.enum(["price", "distance"]).default("price").parse(p.sort);
+    const stores = await catalogStores(db, area);
+    // Fetch exact product/branch observations; no invented substitutes or prices.
+    if (!stores.length) return [];
+    const prices: any[] = [];
+    for (const item of items) {
+      const snapshots = await db.getAll(
+        ...stores.map((store: any) =>
+          db.collection("prices").doc(`${item.id}_${store.id}`),
+        ),
+      );
+      for (const snap of snapshots) if (snap.exists) prices.push(snap.data());
+    }
+    return compareStores(
+      items,
+      stores,
+      prices,
+      area,
+      today(),
+      historical,
+      sort,
+    );
   }
   if (action === "markNotifications") {
     const ids = z.array(z.string().max(160)).max(100).parse(p.ids);
     await home.collection("readNotifications").doc(uid).set({ ids });
     return { ok: true };
   }
-  if (action === "connectBank" || action === "syncBank") {
-    if (!data.preferences?.bankConsent)
-      throw new HttpsError(
-        "failed-precondition",
-        "Activa el permiso de conexión bancaria en Perfil.",
-      );
-    await rateLimit(uid, "bank", 3);
-    return action === "connectBank"
-      ? bankSession(uid, integrations.value())
-      : syncBank(uid, integrations.value());
+  if (
+    [
+      "bankAvailability",
+      "bankDiscardReview",
+      "bankConnectionStatus",
+      "bankAuthorize",
+      "bankConnect",
+      "bankAccounts",
+      "bankPreview",
+      "bankImport",
+      "bankDisconnect",
+      "bankEraseImports",
+    ].includes(action)
+  ) {
+    await rateLimit(uid, "bank", 20);
+    return privateBankAction(
+      uid,
+      home,
+      data,
+      Number(token.auth_time),
+      action,
+      p,
+      integrations.value(),
+    );
   }
   throw new HttpsError("invalid-argument", "Operación desconocida.");
 }

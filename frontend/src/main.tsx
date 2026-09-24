@@ -31,7 +31,18 @@ import { Simulator } from "./Simulator";
 import { MovementModal } from "./MovementModal";
 import { JamiChat } from "./JamiChat";
 import "./styles.css";
+const incomingInvite = new URLSearchParams(window.location.search).get(
+  "invite",
+);
+if (
+  incomingInvite &&
+  /^(?:[A-Fa-f0-9]{16}|[A-Fa-f0-9]{32})$/.test(incomingInvite)
+)
+  sessionStorage.setItem("summa-invite", incomingInvite.toUpperCase());
 function App() {
+  const [inviteNotice, setInviteNotice] = useState(
+    !!sessionStorage.getItem("summa-invite"),
+  );
   const [signed, setSigned] = useState(false);
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState<State | null>(null);
@@ -145,6 +156,21 @@ function App() {
         <div className="global-error">
           <ErrorText text={error} />
         </div>
+      )}
+      {inviteNotice && sessionStorage.getItem("summa-invite") && (
+        <p className="invite-preview">
+          Ya perteneces a {state.home?.name}. La invitación no cambia tu hogar
+          automáticamente.{" "}
+          <button
+            className="text-button"
+            onClick={() => {
+              sessionStorage.removeItem("summa-invite");
+              setInviteNotice(false);
+            }}
+          >
+            Descartar invitación
+          </button>
+        </p>
       )}
       <Routes>
         <Route

@@ -22,6 +22,10 @@ export interface Preferences {
   donations: boolean;
 }
 export interface Movement {
+  possibleDuplicate?: boolean;
+  ruleApplied?: boolean;
+  allowDuplicate?: boolean;
+  learnCategory?: boolean;
   id?: string;
   type: "gasto" | "ingreso" | "transferencia";
   incomeKind?: "regular" | "extra";
@@ -98,6 +102,8 @@ export interface State {
     ownerUid: string;
     esDemo?: boolean;
     invitationCode: string;
+    invitationExpiresAt?: string | null;
+    location?: import("./LocationPicker").Area;
     members: Member[];
     preferences?: Preferences;
     personalized?: boolean;

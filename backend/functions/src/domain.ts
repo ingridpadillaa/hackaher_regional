@@ -44,6 +44,8 @@ export const preferencesSchema = z.object({
 });
 export const movementSchema = z.object({
   requestId: z.string().uuid(),
+  allowDuplicate: z.boolean().optional(),
+  learnCategory: z.boolean().optional(),
   type: z.enum(["gasto", "ingreso", "transferencia"]),
   incomeKind: z.enum(["regular", "extra"]).optional(),
   amount: z.number().positive().max(10000000).multipleOf(0.01),
@@ -69,9 +71,9 @@ export const cartSchema = z
   .array(
     z.object({
       id: z.string().regex(/^[\w-]{1,128}$/),
-      name: text,
+      name: z.string().trim().min(1).max(400),
       quantity: z.number().positive().max(999),
-      unit: z.string().max(30),
+      unit: z.string().max(200),
       selected: z.boolean(),
     }),
   )

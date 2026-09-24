@@ -300,7 +300,7 @@ export function Simulator({
         <div className="section-heading">
           <Landmark className="pink" />
           <div>
-            <h3>Ahorro verificado</h3>
+            <h3>Mi conexión bancaria</h3>
             {state.bank.sandbox && (
               <span className="badge">Sandbox · Datos de prueba</span>
             )}

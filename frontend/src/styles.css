@@ -2220,3 +2220,76 @@ details p {
     grid-template-columns: 1fr;
   }
 }
+
+.location-picker {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0;
+}
+.location-picker .form-grid {
+  align-items: start;
+}
+.invitation-card {
+  display: grid;
+  gap: 14px;
+}
+.invitation-qr {
+  display: flex;
+  justify-content: center;
+}
+.invitation-card input {
+  font-size: 12px;
+}
+.invite-preview,
+.duplicate-warning {
+  padding: 14px;
+  border-radius: 12px;
+  background: #fff1d6;
+  color: #5f481a;
+}
+.comparison-lines p {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.comparison-lines strong {
+  display: block;
+}
+.store-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.store-card {
+  min-width: 0;
+}
+.store-card h3 {
+  overflow-wrap: anywhere;
+  font-size: 17px;
+}
+.store-card.rank-3 {
+  border-color: #8b7aa4;
+}
+.store-card.rank-3 button {
+  background: #77618f;
+}
+.store-card small {
+  margin: 8px 0;
+}
+.analysis-result .draft-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+@media (max-width: 420px) {
+  .location-picker .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .store-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bank-review-row {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line, #e7ded3);
+  overflow-wrap: anywhere;
+}

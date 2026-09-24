@@ -7,7 +7,7 @@ Implementado en Firebase Functions; React usa únicamente la función autenticad
 - `usuarios/{uid}`: nombre, email, hogarId, rol, personalizacionCompleta, creadoEn. Identidad proporcionada por Firebase Auth.
 - `hogares/{homeId}`: name, ownerUid, invitationCode, schemaVersion=2, currency=MXN, timezone=America/Monterrey, preferences, personalized, createdAt, migratedAt.
 - `hogares/{homeId}/members/{memberId}`: name, age, relationship, education, occupation, income, period, accountUid opcional. Un perfil no equivale a una cuenta. Los perfiles vinculados conservan el ID de Auth para comprobar membresía; los demás conservan su ID actual.
-- `invitations/{code}`: homeId, createdBy. Se conserva el flujo existente. Caducidad y revocación corresponden a la fase de invitaciones, no a esta entrega.
+- `invitations/{code}`: homeId, createdBy. Incluye expiresAt y revoked; caduca en siete días y admite renovación/revocación por la administración.
 
 Cada operación del backend deriva el hogar del usuario autenticado y comprueba su membresía. Administración de integrantes, preferencias y presupuestos: solo ownerUid. Movimientos, aportaciones y agenda: integrantes que terminaron el registro. Nunca se acepta un homeId enviado por el navegador como autorización.
 
@@ -44,7 +44,7 @@ El reporte se recalcula por mes consultado desde `movements` y `budgets`; no se 
 
 ## Catálogo y conectores conservados
 
-`products/{id}` mantiene name, searchName, unit y offers por tienda con price, date, source, municipality y productUrl opcional. `hogares/{id}/cart/current` conserva items y updatedAt. La normalización futura en productos/sucursales/precios se realizará con el cargador de PROFECO de la fase 6, sin fabricar catálogo en esta entrega. `bankConnections/{uid}` y `rateLimits` permanecen privados al backend. Los secretos solo están en Secret Manager/configuración local ignorada por Git.
+`products/{id}` mantiene name, searchName, unit y offers por tienda con price, date, source, municipality y productUrl opcional. `hogares/{id}/cart/current` conserva items y updatedAt. El catálogo vigente usa catalogProducts, stores y prices, con procedencia en catalogImports/profeco; véase IA_UBICACION_CATALOGO.md. `bankConnections/{uid}` y `rateLimits` permanecen privados al backend. Los secretos solo están en Secret Manager/configuración local ignorada por Git.
 
 ## Migración y conservación
 
@@ -58,7 +58,7 @@ El reporte se recalcula por mes consultado desde `movements` y `budgets`; no se 
 
 Los campos antiguos lifestyle, priorities y assistantTone pueden seguir almacenados para evitar pérdida de información; ya no se solicitan en Perfil ni se envían a Gemini. Jami usa un tono cercano y las metas registradas.
 
-No hay borrado masivo, carga de tres meses, ni modificación de hogares de producción durante el desarrollo. Para aplicar esta versión al entorno público se requiere desplegar el backend y frontend; la migración corre al abrir cada hogar.
+No hay borrado masivo ni modificación de hogares de producción durante el desarrollo. La fase 7 incorpora una carga explícita de tres meses únicamente en el hogar aislado demo-hacka-v2 de los emuladores; véase FASE_7_DEMO_HACKA.md. Para aplicar esta versión al entorno público se requiere desplegar el backend y frontend; la migración corre al abrir cada hogar.
 
 ## Índices y verificación
 

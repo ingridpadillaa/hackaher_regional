@@ -65,7 +65,7 @@ La imagen Flask se construye desde la raíz con `docker build -f backend/Dockerf
 
 ## Finanzas y experiencia · fases 1–3
 
-Reportes por mes con ingresos recibidos separados de previsiones, presupuesto mensual independiente, aportaciones y retiros por meta, racha semanal declarada y agenda de cobros/pagos/aportaciones. Fondos arena, Jami circular y Perfil simplificado. La migración aditiva a versión 2 se ejecuta al cargar cada hogar, conservando sus datos. Consulta [el modelo de datos](docs/MODELO_DATOS.md). No se ha desplegado esta actualización a producción ni cargado el dataset de demostración.
+Reportes por mes con ingresos recibidos separados de previsiones, presupuesto mensual independiente, aportaciones y retiros por meta, racha semanal declarada y agenda de cobros/pagos/aportaciones. Fondos arena, Jami circular y Perfil simplificado. La migración aditiva a versión 2 se ejecuta al cargar cada hogar, conservando sus datos. Consulta [el modelo de datos](docs/MODELO_DATOS.md). No se ha desplegado esta actualización a producción. El dataset actualizado se carga solo en emuladores; consulta la fase 7.
 
 ## Documentación
 
@@ -75,3 +75,19 @@ Reportes por mes con ingresos recibidos separados de previsiones, presupuesto me
 - [Diseño inicial del equipo](docs/DISENO_INICIAL.md), conservado como referencia histórica.
 
 La versión Flask se conserva como referencia y no participa en el build de React. El despliegue público continúa pendiente; subir código a GitHub no despliega la aplicación.
+
+### Fases 4–6
+
+Tickets clasificados por Gemini con revisión y detección de duplicados; ubicación por permiso del navegador; invitaciones QR con caducidad; comparación de hasta cuatro sucursales con catálogo real de PROFECO. Configuración, carga local y límites en [IA, ubicación y catálogo](docs/IA_UBICACION_CATALOGO.md).
+
+### Fase 7 · Demo Hacka
+
+Dataset local de tres meses para Rosy Herrera y Vane Ramirez, con reportes conciliados, libro de ahorro, agenda e invitaciones. Acceso, carga reproducible y guion en [Demo Hacka](docs/FASE_7_DEMO_HACKA.md). La demo anterior y los hogares de producción se conservan.
+
+### Conexión bancaria personal
+
+Consentimiento individual, revisión de movimientos, importación privada y desconexión con Syncfy. La clave disponible solo ofrece BBVA sandbox; no se ha conectado una cuenta real ni habilitado producción. Estado, controles y requisitos en [Open Banking](docs/OPEN_BANKING.md).
+
+### Piloto H-E-B
+
+Preparación de transferencia de mandado con equivalencias exactas y activación condicionada a una prueba real. H-E-B bloqueó el acceso del entorno (Error 15/403); el botón de carrito preparado permanece deshabilitado. Evidencia, prueba reproducible y pendientes en [Piloto H-E-B](docs/PILOTO_CARRITO_HEB.md).

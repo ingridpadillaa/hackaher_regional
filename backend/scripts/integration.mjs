@@ -79,7 +79,7 @@ await api(a, "savePreferences", {
   members: s.home.members,
 });
 s = await api(a, "bootstrap");
-assert.equal(s.home.preferences.municipality, recordedPreferences.municipality);
+assert.equal(s.home.preferences.municipality, "Changed");
 assert.equal(s.home.preferences.aiConsent, false);
 assert.equal(s.home.preferences.bankConsent, false);
 const reply = await api(a, "chat", { message: "¿Cómo van mis gastos?" });

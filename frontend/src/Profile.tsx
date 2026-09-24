@@ -8,6 +8,7 @@ import {
   Plus,
   LogOut,
 } from "lucide-react";
+import { LocationPicker, type Area } from "./LocationPicker";
 import { Link } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth, call, errorMessage } from "./firebase";
@@ -50,6 +51,13 @@ export function Profile({
       ? false
       : (home.preferences?.privacyAccepted ?? false),
   });
+  const [area, setArea] = useState<Area>(
+    home.location ?? {
+      municipality: home.preferences?.municipality ?? "",
+      state: "",
+      source: "manual",
+    },
+  );
   const [members, setMembers] = useState<Member[]>(home.members);
   useEffect(() => {
     setMembers(home.members);
@@ -86,7 +94,13 @@ export function Profile({
       await call(
         owner ? "savePreferences" : "completeMemberProfile",
         owner
-          ? { ...prefs, members, assistantTone: "cercano" }
+          ? {
+              ...prefs,
+              members,
+              assistantTone: "cercano",
+              municipality: area.municipality,
+              location: area,
+            }
           : { privacyAccepted: prefs.privacyAccepted },
       );
       await onSaved();
@@ -246,18 +260,11 @@ export function Profile({
             </section>
             <section className="card profile-settings">
               <h2>Ubicación del hogar</h2>
-              <div>
-                <Field label="Municipio">
-                  <input
-                    required={owner}
-                    disabled={!owner}
-                    maxLength={120}
-                    value={prefs.municipality}
-                    placeholder="Municipio del hogar"
-                    onChange={(e) => change("municipality", e.target.value)}
-                  />
-                </Field>
-              </div>
+              <LocationPicker
+                value={area}
+                onChange={setArea}
+                disabled={!owner}
+              />
             </section>
             <section className="card profile-settings">
               <h2>Privacidad y permisos</h2>
@@ -288,15 +295,11 @@ export function Profile({
                   documentos no se almacenan.
                 </span>
               </label>
-              <label className="check-line">
-                <input
-                  type="checkbox"
-                  checked={prefs.bankConsent}
-                  disabled={!owner}
-                  onChange={(e) => change("bankConsent", e.target.checked)}
-                />
-                <span>Quiero conectar mi banco para verificar mi ahorro.</span>
-              </label>
+              <p className="helper">
+                La conexión bancaria se autoriza de forma individual en
+                Simulador → Conectar mi banco. No acredita ahorro
+                automáticamente.
+              </p>
             </section>
           </>
         )}
@@ -319,7 +322,38 @@ export function Profile({
           </Next>
         </Button>
       </form>
-      <ShareHome code={home.invitationCode} />
+      {!initial && (
+        <section className="card">
+          <h2>Zona del hogar</h2>
+          <LocationPicker value={area} onChange={setArea} disabled={!owner} />
+          {owner && (
+            <Button
+              busy={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                try {
+                  await call("saveLocation", area);
+                  await onSaved();
+                  setSaved(true);
+                } catch (e) {
+                  setError(errorMessage(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Guardar zona
+            </Button>
+          )}
+        </section>
+      )}
+      <ShareHome
+        code={home.invitationCode}
+        expiresAt={home.invitationExpiresAt}
+        owner={owner}
+        onSaved={onSaved}
+      />
       {!initial && (
         <button className="text-button logout" onClick={() => signOut(auth)}>
           <LogOut size={18} />
