@@ -1,1 +1,8 @@
-{% extends 'base.html' %}{% block content %}<section class="card"><h1>{{ error.code }}</h1><p>{{ error.description }}</p><a class="button" href="/">Volver al inicio</a></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+    <section class="card">
+        <h1>{{ error.code }}</h1>
+        <p>{{ error.description }}</p>
+        <a class="button" href="/">Volver al inicio</a>
+    </section>
+{% endblock %}

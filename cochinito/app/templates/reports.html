@@ -1,1 +1,98 @@
-{% extends 'base.html' %}{% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>{% endblock %}{% block content %}<span class="eyebrow">ENTENDER PARA ELEGIR MEJOR</span><h1>Tu dinero en perspectiva</h1><div class="tabs"><a href="/movimientos">← Movimientos</a>{% for period in ['semana','quincena','mes'] %}<a class="{{ 'selected' if report.window==period }}" href="?periodo={{ period }}">{{ period|capitalize }}</a>{% endfor %}</div><div class="grid three">{% for key,label in [('income','Ingresos'),('expenses','Gastos'),('balance','Balance')] %}<section class="card"><span class="eyebrow">{{ label }}</span><p class="metric">{{ report.current[key]|money }}</p><small>Periodo anterior: {{ report.previous[key]|money }}</small></section>{% endfor %}</div><div class="grid section-title"><section class="card"><h2>¿En qué se fue?</h2><canvas id="categories-chart" aria-label="Gastos por categoría" role="img"></canvas><div class="table-wrap"><table><thead><tr><th>Categoría</th><th>Gasto</th></tr></thead><tbody>{% for category,amount in report.current.categories.items() %}<tr><td><a href="/movimientos?categoria={{ category|urlencode }}">{{ category }} ↗</a></td><td>{{ amount|money }}</td></tr>{% endfor %}</tbody></table></div></section><section class="card"><h2>Tu ritmo en el tiempo</h2><canvas id="periods-chart" aria-label="Ingresos y gastos de seis periodos" role="img"></canvas><table><thead><tr><th>Desde</th><th>Ingresos</th><th>Gastos</th></tr></thead><tbody>{% for period in report.periods %}<tr><td>{{ period.label }}</td><td>{{ period.income|money }}</td><td>{{ period.expenses|money }}</td></tr>{% endfor %}</tbody></table></section></div><div class="grid three"><section class="card soft"><h3>Pequeños gastos</h3><p class="metric">{{ report.current.small|money }}</p><p class="subtle">Compras de menos de $100 en comida fuera y entretenimiento.</p></section><section class="card soft"><h3>La categoría que más creció</h3><p>{{ report.growth if report.growth_amount>0 else 'Sin aumentos en este periodo' }}</p>{% if report.growth_amount>0 %}<strong>+{{ report.growth_amount|money }}</strong>{% endif %}</section><section class="card soft"><h3>Tu inflación personal</h3><p class="metric">{{ (report.inflation|string + '%') if report.inflation is not none else 'Sin datos' }}</p><p class="subtle">Variación promedio entre el primer y último precio de productos repetidos en tus tickets.</p></section></div>{% endblock %}{% block scripts %}<script>const report={{ report|tojson }};const categories=Object.keys(report.current.categories);new Chart(document.getElementById('categories-chart'),{type:'doughnut',data:{labels:categories,datasets:[{data:Object.values(report.current.categories),backgroundColor:['#F6A5C0','#C9B6EC','#F26B3A','#FFD8C7','#8DBBA5','#DBC8AD','#B6D5EC']}]},options:{cutout:'72%',plugins:{legend:{position:'bottom'}},onClick:(e,elements)=>{if(elements.length)location.href='/movimientos?categoria='+encodeURIComponent(categories[elements[0].index]);}}});new Chart(document.getElementById('periods-chart'),{type:'bar',data:{labels:report.periods.map(p=>p.label),datasets:[{label:'Ingresos',data:report.periods.map(p=>p.income),backgroundColor:'#C9B6EC',borderRadius:6},{label:'Gastos',data:report.periods.map(p=>p.expenses),backgroundColor:'#F6A5C0',borderRadius:6}]},options:{plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}});</script>{% endblock %}
+{% extends "base.html" %}
+{% block head %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+    <span class="eyebrow">ENTENDER PARA ELEGIR MEJOR</span>
+    <h1>Tu dinero en perspectiva</h1>
+    <div class="tabs">
+        <a href="/movimientos">← Movimientos</a>
+        {% for period in ['semana','quincena','mes'] %}
+            <a class="{{ 'selected' if report.window==period }}"
+               href="?periodo={{ period }}">{{ period|capitalize }}</a>
+        {% endfor %}
+    </div>
+    <div class="grid three">
+        {% for key,label in [('income','Ingresos'),('expenses','Gastos'),('balance','Balance')] %}
+            <section class="card">
+                <span class="eyebrow">{{ label }}</span>
+                <p class="metric">{{ report.current[key]|money }}</p>
+                <small>Periodo anterior: {{ report.previous[key]|money }}</small>
+            </section>
+        {% endfor %}
+    </div>
+    <div class="grid section-title">
+        <section class="card">
+            <h2>¿En qué se fue?</h2>
+            <canvas id="categories-chart" aria-label="Gastos por categoría" role="img">
+            </canvas>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Gasto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category,amount in report.current.categories.items() %}
+                            <tr>
+                                <td>
+                                    <a href="/movimientos?categoria={{ category|urlencode }}">{{ category }} ↗</a>
+                                </td>
+                                <td>{{ amount|money }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="card">
+            <h2>Tu ritmo en el tiempo</h2>
+            <canvas id="periods-chart"
+                    aria-label="Ingresos y gastos de seis periodos"
+                    role="img">
+            </canvas>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Desde</th>
+                        <th>Ingresos</th>
+                        <th>Gastos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for period in report.periods %}
+                        <tr>
+                            <td>{{ period.label }}</td>
+                            <td>{{ period.income|money }}</td>
+                            <td>{{ period.expenses|money }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+    <div class="grid three">
+        <section class="card soft">
+            <h3>Pequeños gastos</h3>
+            <p class="metric">{{ report.current.small|money }}</p>
+            <p class="subtle">Compras de menos de $100 en comida fuera y entretenimiento.</p>
+        </section>
+        <section class="card soft">
+            <h3>La categoría que más creció</h3>
+            <p>{{ report.growth if report.growth_amount>0 else 'Sin aumentos en este periodo' }}</p>
+            {% if report.growth_amount>0 %}
+                <strong>+{{ report.growth_amount|money }}</strong>
+            {% endif %}
+        </section>
+        <section class="card soft">
+            <h3>Tu inflación personal</h3>
+            <p class="metric">{{ (report.inflation|string + '%') if report.inflation is not none else 'Sin datos' }}</p>
+            <p class="subtle">Variación promedio entre el primer y último precio de productos repetidos en tus tickets.</p>
+        </section>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script>if(window.Chart){const report={{ report|tojson }};const categories=Object.keys(report.current.categories);new Chart(document.getElementById('categories-chart'),{type:'doughnut',data:{labels:categories,datasets:[{data:Object.values(report.current.categories),backgroundColor:['#F6A5C0','#C9B6EC','#F26B3A','#FFD8C7','#8DBBA5','#DBC8AD','#B6D5EC']}]},options:{cutout:'72%',plugins:{legend:{position:'bottom'}},onClick:(e,elements)=>{if(elements.length)location.href='/movimientos?categoria='+encodeURIComponent(categories[elements[0].index]);}}});new Chart(document.getElementById('periods-chart'),{type:'bar',data:{labels:report.periods.map(p=>p.label),datasets:[{label:'Ingresos',data:report.periods.map(p=>p.income),backgroundColor:'#C9B6EC',borderRadius:6},{label:'Gastos',data:report.periods.map(p=>p.expenses),backgroundColor:'#F6A5C0',borderRadius:6}]},options:{plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}});}</script>
+{% endblock %}

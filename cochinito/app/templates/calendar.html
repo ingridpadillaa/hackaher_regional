@@ -1,1 +1,54 @@
-{% extends 'base.html' %}{% block content %}<span class="eyebrow">LOS PLANES BONITOS TAMBIÉN SE PREPARAN</span><h1>{{ event.nombre if event else 'Un paso adelante' }}</h1><p class="muted">Celebra con los tuyos, sin sorpresas para tu bolsillo.</p>{% if event %}<section class="hero narrow"><span class="badge">{{ event.fechaInicio }} → {{ event.fechaFin }}</span><h2 style="margin-top:25px">Un poquito cada semana</h2><div class="amount">{{ event.weekly|money }}</div><p>Gasto estimado: <strong>{{ event.estimate|money }}</strong></p><p>Calculado con {{ event.source }}. El apartado divide lo que falta entre las semanas disponibles.</p><p class="subtle">Fechas de planeación aproximadas para temporadas; ajusta tu ahorro según tus planes reales.</p><a class="button" href="/calendario">Ver todas las temporadas</a></section>{% else %}<form method="get" class="row" style="max-width:420px"><label>Filtrar mes<select name="mes"><option value="">Todos</option>{% for month in range(1,13) %}<option value="{{ '%02d'|format(month) }}" {{ 'selected' if request.args.get('mes')=='%02d'|format(month) }}>{{ ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][month-1] }}</option>{% endfor %}</select></label><button>Ver</button></form><div class="grid">{% for item in events %}<a href="/calendario/{{ item.id }}" class="card {{ 'soft' if loop.index%2==0 }}"><span class="eyebrow">{{ item.fechaInicio }} · {{ item.categoria }}</span><h2>{{ item.nombre }}</h2><div class="row"><div><span class="metric">{{ item.weekly|money }}</span><small> / semana</small></div><span>↗</span></div><p class="subtle">Estimado total {{ item.estimate|money }} · {{ item.source }}</p></a>{% else %}<section class="card"><p>No hay temporadas en este mes.</p></section>{% endfor %}</div><p class="subtle section-title">Fechas de planeación aproximadas. Las estimaciones se ajustan al ingreso de tu hogar y al historial disponible.</p>{% endif %}{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+    <span class="eyebrow">LOS PLANES BONITOS TAMBIÉN SE PREPARAN</span>
+    <h1>{{ event.nombre if event else 'Un paso adelante' }}</h1>
+    <p class="muted">Celebra con los tuyos, sin sorpresas para tu bolsillo.</p>
+    {% if event %}
+        <section class="hero narrow">
+            <span class="badge">{{ event.fechaInicio }} → {{ event.fechaFin }}</span>
+            <h2 style="margin-top:25px">Un poquito cada semana</h2>
+            <div class="amount">{{ event.weekly|money }}</div>
+            <p>
+                Gasto estimado: <strong>{{ event.estimate|money }}</strong>
+            </p>
+            <p>Calculado con {{ event.source }}. El apartado divide lo que falta entre las semanas disponibles.</p>
+            <p class="subtle">Fechas de planeación aproximadas para temporadas; ajusta tu ahorro según tus planes reales.</p>
+            <a class="button" href="/calendario">Ver todas las temporadas</a>
+        </section>
+    {% else %}
+        <form method="get" class="row" style="max-width:420px">
+            <label>
+                Filtrar mes<select name="mes">
+                <option value="">Todos</option>
+                {% for month in range(1,13) %}
+                    <option value="{{ '%02d'|format(month) }}"
+                            {{ 'selected' if request.args.get("mes")=='%02d'|format(month) }}>{{ ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][month-1] }}</option>
+                {% endfor %}
+                </select>
+            </label>
+            <button>Ver</button>
+        </form>
+        <div class="grid">
+            {% for item in events %}
+                <a href="/calendario/{{ item.id }}"
+                   class="card {{ 'soft' if loop.index%2==0 }}">
+                    <span class="eyebrow">{{ item.fechaInicio }} · {{ item.categoria }}</span>
+                    <h2>{{ item.nombre }}</h2>
+                    <div class="row">
+                        <div>
+                            <span class="metric">{{ item.weekly|money }}</span>
+                            <small>/ semana</small>
+                        </div>
+                        <span>↗</span>
+                    </div>
+                    <p class="subtle">Estimado total {{ item.estimate|money }} · {{ item.source }}</p>
+                </a>
+            {% else %}
+                <section class="card">
+                    <p>No hay temporadas en este mes.</p>
+                </section>
+            {% endfor %}
+        </div>
+        <p class="subtle section-title">Fechas de planeación aproximadas. Las estimaciones se ajustan al ingreso de tu hogar y al historial disponible.</p>
+    {% endif %}
+{% endblock %}

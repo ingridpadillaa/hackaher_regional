@@ -1,1 +1,83 @@
-<!doctype html><html lang="es-MX"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#F26B3A"><meta name="csrf-token" content="{{ g.csrf_token }}"><title>{% block title %}Cochinito · Tu dinero, con calma{% endblock %}</title><link rel="manifest" href="/static/manifest.json"><link rel="icon" href="/static/icon.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/app.css"><script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script><script defer src="/static/app.js"></script>{% block head %}{% endblock %}</head><body><div class="shell"><header><a class="brand" href="/">◕ <span>cochinito</span><small>tu dinero, con calma</small></a>{% if g.user %}<a class="icon-btn" href="/calendario" aria-label="Calendario">▦</a><span class="avatar">{{ g.user.nombre[:1] }}</span>{% endif %}</header>{% if demo_mode %}<div class="demo-strip">✦ Modo demo · datos de ejemplo · sin conexión bancaria real</div>{% endif %}<main>{% for message in get_flashed_messages() %}<div class="notice" role="status">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main>{% if g.user and g.hogar_id %}<nav class="bottom-nav" aria-label="Navegación principal">{% for href,icon,label in [('/', '⌂','Inicio'),('/movimientos','↗','Movimientos'),('/pagos-fijos','▤','Pagos fijos'),('/mandado','▧','Mandado'),('/perfil','♧','Perfil')] %}<a href="{{ href }}" class="{{ 'active' if request.path == href else '' }}"><span>{{ icon }}</span>{{ label }}</a>{% endfor %}</nav><button class="copilot-launch" aria-label="Abrir copiloto" onclick="document.getElementById('copilot').showModal()">✦</button><dialog id="copilot"><div class="row"><h2>Tu copiloto</h2><button class="icon-btn" onclick="document.getElementById('copilot').close()" aria-label="Cerrar">×</button></div><p>Un poquito de claridad para tu quincena.</p><div class="quick-prompts"><button data-prompt="¿Me alcanza para el regreso a clases?">¿Me alcanza para el regreso a clases?</button><button data-prompt="¿En qué se me fue el dinero esta quincena?">¿En qué se me fue el dinero?</button><button data-prompt="¿Me conviene este préstamo?">¿Me conviene este préstamo?</button></div><div id="chat-output" role="status"></div><form id="chat-form"><label for="chat-input">Tu pregunta</label><input id="chat-input" required maxlength="500" placeholder="¿Cuánto puedo gastar hoy?"><button>Preguntar ✦</button></form><small>Estimaciones para organizarte; tú decides.</small></dialog>{% endif %}<footer>Hecho para cuidar lo que importa. <a href="/privacidad">Privacidad</a></footer></div>{% block scripts %}{% endblock %}</body></html>
+<!DOCTYPE html>
+<html lang="es-MX">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta name="theme-color" content="#F26B3A">
+        <meta name="csrf-token" content="{{ g.csrf_token }}">
+        <title>{% block title %}Cochinito · Tu dinero, con calma{% endblock %}</title>
+        <link rel="manifest" href="/static/manifest.json">
+        <link rel="icon" href="/static/icon.svg">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+              rel="stylesheet">
+        <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+        <script src="/static/tailwind-config.js"></script>
+        <link rel="stylesheet" href="/static/app.css">
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
+        <script defer src="/static/app.js"></script>
+        {% block head %}{% endblock %}
+    </head>
+    <body>
+        <div class="shell">
+            <header>
+                <a class="brand" href="/">◕ <span>cochinito</span>
+                    <small>tu dinero, con calma</small>
+                </a>
+                {% if g.user %}
+                    <a class="icon-btn" href="/calendario" aria-label="Calendario">▦</a>
+                    <span class="avatar">{{ g.user.nombre[:1] }}</span>
+                {% endif %}
+            </header>
+            {% if demo_mode %}
+                <div class="demo-strip">✦ Modo demo · datos de ejemplo · sin conexión bancaria real</div>
+            {% endif %}
+            <main>
+                {% for message in get_flashed_messages() %}
+                    <div class="notice" role="status">{{ message }}</div>
+                {% endfor %}
+                {% block content %}{% endblock %}
+            </main>
+            {% if g.user and g.hogar_id %}
+                <nav class="bottom-nav" aria-label="Navegación principal">
+                    {% for href,icon,label in [('/', '⌂','Inicio'),('/movimientos','↗','Movimientos'),('/pagos-fijos','▤','Pagos fijos'),('/mandado','▧','Mandado'),('/perfil','♧','Perfil')] %}
+                        <a href="{{ href }}"
+                           class="{{ 'active' if request.path == href else '' }}">
+                            <span>{{ icon }}</span>{{ label }}</a>
+                    {% endfor %}
+                </nav>
+                <button class="copilot-launch"
+                        aria-label="Abrir copiloto"
+                        onclick="document.getElementById('copilot').showModal()">✦</button>
+                <dialog id="copilot">
+                    <div class="row">
+                        <h2>Tu copiloto</h2>
+                        <button class="icon-btn"
+                                onclick="document.getElementById('copilot').close()"
+                                aria-label="Cerrar">×</button>
+                    </div>
+                    <p>Un poquito de claridad para tu quincena.</p>
+                    <div class="quick-prompts">
+                        <button data-prompt="¿Me alcanza para el regreso a clases?">¿Me alcanza para el regreso a clases?</button>
+                        <button data-prompt="¿En qué se me fue el dinero esta quincena?">¿En qué se me fue el dinero?</button>
+                        <button data-prompt="¿Me conviene este préstamo?">¿Me conviene este préstamo?</button>
+                    </div>
+                    <div id="chat-output" role="status"></div>
+                    <form id="chat-form">
+                        <label for="chat-input">Tu pregunta</label>
+                        <input id="chat-input"
+                               required
+                               maxlength="500"
+                               placeholder="¿Cuánto puedo gastar hoy?">
+                        <button>Preguntar ✦</button>
+                    </form>
+                    <small>Estimaciones para organizarte; tú decides.</small>
+                </dialog>
+            {% endif %}
+            <footer>
+                Hecho para cuidar lo que importa. <a href="/privacidad">Privacidad</a>
+            </footer>
+        </div>
+        {% block scripts %}{% endblock %}
+    </body>
+</html>

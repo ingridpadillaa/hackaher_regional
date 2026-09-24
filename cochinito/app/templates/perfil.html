@@ -1,1 +1,128 @@
-{% extends 'base.html' %}{% block content %}<span class="eyebrow">UN HOGAR, MUCHOS PLANES</span><h1>Tu espacio</h1><div class="grid"><section class="card"><h2>{{ household.nombre }}</h2><p>{{ household.ciudad }}, {{ household.estado }}</p><span class="eyebrow">CÓDIGO DE INVITACIÓN</span><p class="metric">{{ household.codigoInvitacion }}</p><p class="subtle">Compártelo solo con quienes forman parte de tu hogar.</p>{% for member in members %}<div class="list-row"><span class="avatar">{{ member.nombre[:1] }}</span><strong>{{ member.nombre }}</strong><small>{{ member.rol }}</small></div>{% endfor %}<div class="section-title"><span class="pill">Automatización: {{ automation }}</span></div></section><section class="card soft"><h2>Conexiones</h2><p>Tu banco puede ayudarte a registrar. Conectarlo siempre es opcional.</p>{% if demo_mode %}<p class="subtle">Los tres proveedores de este panel son simulados. Todos usan Banco de prueba.</p>{% endif %}{% for connection in connections %}<div class="receipt"><strong>{{ connection.proveedor|capitalize }} {{ '(simulado)' if demo_mode }}</strong><p>{{ connection.estado }} · Última actualización: {{ connection.ultimaSincronizacion or 'pendiente' }}</p>{% if connection.error %}<p>{{ connection.error }}</p>{% endif %}{% if connection.uid==g.user.uid %}<form method="post" action="/perfil/conexiones/{{ connection.id }}/sincronizar"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><button class="secondary">Reintentar sincronización</button></form><form method="post" action="/perfil/conexiones/{{ connection.id }}/desconectar"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><label><input type="checkbox" name="delete">Borrar también sus movimientos importados</label><button class="secondary">Desconectar</button></form>{% endif %}</div>{% endfor %}<form method="post" action="/perfil/conectar"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><label><input type="checkbox" name="consent" required>Autorizo importar mis movimientos</label><button>Conectar {{ 'Banco de prueba' if demo_mode else 'banco (Open Banking)' }} →</button></form></section><section class="card"><h2>Tu privacidad</h2><form method="post" action="/perfil/consentimientos"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><label><input type="checkbox" name="ai" {{ 'checked' if g.user.get('consentimientos',{}).get('iaDatos') }}>Permitir análisis con IA de datos mínimos</label><button class="secondary">Guardar preferencias</button></form><div class="tabs"><a href="/perfil/exportar">Descargar mis datos ↓</a><a href="/privacidad">Aviso de privacidad ↗</a></div><form method="post" action="/auth/logout"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><button class="secondary">Cerrar sesión</button></form><form method="post" action="/perfil/borrar" onsubmit="return confirm('¿Borrar tu cuenta y tus datos? Esta acción es permanente.')"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><label>Escribe BORRAR para eliminar tu cuenta<input name="confirmation" placeholder="BORRAR"></label><button class="danger">Borrar mi cuenta</button></form></section><section class="card"><h2>Estado de proveedores</h2><p class="subtle">{{ 'Laboratorio de failover: fuerza un fallo y crea una nueva conexión para probar la siguiente vía.' if demo_mode else 'Integraciones reales pendientes de validar en sandbox.' }}</p>{% for provider in providers %}<div class="list-row"><div class="detail"><strong>{{ provider.name|capitalize }}</strong><p class="subtle">{{ 'Fallo forzado' if provider.forced else 'Simulación disponible' if demo_mode else 'Sin configurar' }} · {{ provider.fallosConsecutivos or 0 }} fallos</p></div>{% if demo_mode %}<form method="post" action="/perfil/proveedores/{{ provider.name }}/fallo"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><button class="secondary">{{ 'Restaurar' if provider.forced else 'Forzar fallo' }}</button></form>{% endif %}</div>{% endfor %}</section></div><section class="card section-title"><h2>Protección de tu hogar</h2>{% for alert in alerts %}<p>✦ {{ alert.mensaje }}</p>{% else %}<p>Sin alertas por ahora.</p>{% endfor %}</section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+    <span class="eyebrow">UN HOGAR, MUCHOS PLANES</span>
+    <h1>Tu espacio</h1>
+    <div class="grid">
+        <section class="card">
+            <h2>{{ household.nombre }}</h2>
+            <p>{{ household.ciudad }}, {{ household.estado }}</p>
+            <span class="eyebrow">CÓDIGO DE INVITACIÓN</span>
+            <p class="metric">{{ household.codigoInvitacion }}</p>
+            <img src="/perfil/invitacion.svg"
+                 width="150"
+                 height="150"
+                 alt="Código QR de invitación al hogar">
+            <p class="subtle">Compártelo solo con quienes forman parte de tu hogar.</p>
+            {% for member in members %}
+                <div class="list-row">
+                    <span class="avatar">{{ member.nombre[:1] }}</span>
+                    <strong>{{ member.nombre }}</strong>
+                    <small>{{ member.rol }}</small>
+                </div>
+            {% endfor %}
+            <div class="section-title">
+                <span class="pill">Automatización: {{ automation }}</span>
+            </div>
+        </section>
+        <section class="card soft">
+            <h2>Conexiones</h2>
+            <p>Tu banco puede ayudarte a registrar. Conectarlo siempre es opcional.</p>
+            {% if demo_mode %}
+                <p class="subtle">Los tres proveedores de este panel son simulados. Todos usan Banco de prueba.</p>
+            {% endif %}
+            {% for connection in connections %}
+                <div class="receipt">
+                    <strong>{{ connection.proveedor|capitalize }} {{ '(simulado)' if demo_mode }}</strong>
+                    <p>{{ connection.estado }} · Última actualización: {{ connection.ultimaSincronizacion or 'pendiente' }}</p>
+                    {% if connection.error %}
+                        <p>{{ connection.error }}</p>
+                    {% endif %}
+                    {% if connection.uid==g.user.uid %}
+                        <form method="post"
+                              action="/perfil/conexiones/{{ connection.id }}/sincronizar">
+                            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                            <button class="secondary">Reintentar sincronización</button>
+                        </form>
+                        <form method="post"
+                              action="/perfil/conexiones/{{ connection.id }}/desconectar">
+                            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                            <label>
+                                <input type="checkbox" name="delete">Borrar también sus movimientos importados
+                            </label>
+                            <button class="secondary">Desconectar</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <form method="post" action="/perfil/conectar">
+                <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                <label>
+                    <input type="checkbox" name="consent" required>Autorizo importar mis movimientos
+                </label>
+                <button>Conectar {{ 'Banco de prueba' if demo_mode else 'banco (Open Banking)' }} →</button>
+            </form>
+        </section>
+        <section class="card">
+            <h2>Tu privacidad</h2>
+            <form method="post" action="/perfil/datos">
+                <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                <label>
+                    Tu nombre<input name="name" value="{{ g.user.nombre }}" maxlength="80" required>
+                </label>
+                <button class="secondary">Actualizar perfil</button>
+            </form>
+            <form method="post" action="/perfil/consentimientos">
+                <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                <label>
+                    <input type="checkbox"
+                           name="ai"
+                           {{ 'checked' if g.user.get('consentimientos', {}).get('iaDatos') }}>Permitir análisis con IA de datos mínimos
+                </label>
+                <button class="secondary">Guardar preferencias</button>
+            </form>
+            <div class="tabs">
+                <a href="/perfil/exportar">Descargar mis datos ↓</a>
+                <a href="/privacidad">Aviso de privacidad ↗</a>
+            </div>
+            <form method="post" action="/auth/logout">
+                <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                <button class="secondary">Cerrar sesión</button>
+            </form>
+            <form method="post"
+                  action="/perfil/borrar"
+                  onsubmit="return confirm('¿Borrar tu cuenta y tus datos? Esta acción es permanente.')">
+                <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                <label>
+                    Escribe BORRAR para eliminar tu cuenta<input name="confirmation" placeholder="BORRAR">
+                </label>
+                <button class="danger">Borrar mi cuenta</button>
+            </form>
+        </section>
+        <section class="card">
+            <h2>Estado de proveedores</h2>
+            <p class="subtle">{{ 'Laboratorio de failover: fuerza un fallo y crea una nueva conexión para probar la siguiente vía.' if demo_mode else 'Integraciones reales pendientes de validar en sandbox.' }}</p>
+            {% for provider in providers %}
+                <div class="list-row">
+                    <div class="detail">
+                        <strong>{{ provider.name|capitalize }}</strong>
+                        <p class="subtle">{{ 'Fallo forzado' if provider.forced else 'Simulación disponible' if demo_mode else 'Sin configurar' }} · {{ provider.fallosConsecutivos or 0 }} fallos</p>
+                    </div>
+                    {% if demo_mode %}
+                        <form method="post" action="/perfil/proveedores/{{ provider.name }}/fallo">
+                            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                            <button class="secondary">{{ 'Restaurar' if provider.forced else 'Forzar fallo' }}</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </section>
+    </div>
+    <section class="card section-title">
+        <h2>Protección de tu hogar</h2>
+        {% for alert in alerts %}
+            <p>✦ {{ alert.mensaje }}</p>
+        {% else %}
+            <p>Sin alertas por ahora.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

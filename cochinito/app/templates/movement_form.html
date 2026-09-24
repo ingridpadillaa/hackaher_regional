@@ -1,1 +1,77 @@
-{% extends 'base.html' %}{% block content %}<section class="card form-card"><span class="eyebrow">UN PEQUEÑO HÁBITO</span><h1>Registrar movimiento</h1><form method="post"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><label>Monto en pesos<input style="font-size:40px" type="number" name="monto" min=".01" max="100000000" step=".01" inputmode="decimal" placeholder="$0.00" required></label><label>Tipo<select name="tipo"><option value="gasto">Gasto</option><option value="ingreso">Ingreso</option><option value="transferencia">Transferencia / pago de tarjeta</option></select></label><p>¿En qué categoría va?</p><div class="categories">{% for category,icon in categories.items() %}<label class="category"><span>{{ icon }}</span><br><input type="radio" name="categoria" value="{{ category }}" {{ 'checked' if loop.first }}> {{ category }}</label>{% endfor %}</div><label style="margin-top:20px">Descripción<input name="descripcion" placeholder="Por ejemplo: despensa de la semana" maxlength="160"></label><div class="grid"><label>Fecha<input type="date" name="fecha" value="{{ today }}" max="{{ today }}" required></label><label>Método de pago<select name="metodoPago"><option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="credito">Crédito</option><option value="transferencia">Transferencia</option></select></label></div><label><input type="checkbox" name="privado" value="1">Solo yo puedo ver este movimiento</label><button style="width:100%">Guardar movimiento →</button></form></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+    {% set item = item|default({}) %}
+    <section class="card form-card">
+        <span class="eyebrow">UN PEQUEÑO HÁBITO</span>
+        <h1>{{ 'Editar movimiento' if item else 'Registrar movimiento' }}</h1>
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+            <label>
+                Monto en pesos<input style="font-size:40px"
+       type="number"
+       name="monto"
+       min=".01"
+       max="100000000"
+       step=".01"
+       inputmode="decimal"
+       placeholder="$0.00"
+       value="{{ item.get('monto', '') }}"
+       required>
+            </label>
+            <label>
+                Tipo<select name="tipo">
+                <option value="gasto" {{ 'selected' if item.get("tipo")=='gasto' }}>Gasto</option>
+                <option value="ingreso" {{ 'selected' if item.get("tipo")=='ingreso' }}>Ingreso</option>
+                <option value="transferencia"
+                        {{ 'selected' if item.get("tipo")=='transferencia' }}>Transferencia / pago de tarjeta</option>
+                </select>
+            </label>
+            <p>¿En qué categoría va?</p>
+            <div class="categories">
+                {% for category,icon in categories.items() %}
+                    <label class="category">
+                        <span>{{ icon }}</span>
+                        <br>
+                        <input type="radio"
+                               name="categoria"
+                               value="{{ category }}"
+                               {{ 'checked' if category==item.get('categoria', 'Súper') }}> {{ category }}
+                    </label>
+                {% endfor %}
+            </div>
+            <input type="hidden" name="cuentaId" value="{{ item.get('cuentaId', '') }}">
+            <label style="margin-top:20px">
+                Descripción<input name="descripcion"
+       value="{{ item.get('descripcion', '') }}"
+       placeholder="Por ejemplo: despensa de la semana"
+       maxlength="160">
+            </label>
+            <div class="grid">
+                <label>
+                    Fecha<input type="date"
+       name="fecha"
+       value="{{ item.get('fecha',today) }}"
+       max="{{ today }}"
+       required>
+                </label>
+                <label>
+                    Método de pago<select name="metodoPago">
+                    <option value="efectivo"
+                            {{ 'selected' if item.get("metodoPago")=='efectivo' }}>Efectivo</option>
+                    <option value="debito" {{ 'selected' if item.get("metodoPago")=='debito' }}>Débito</option>
+                    <option value="credito" {{ 'selected' if item.get("metodoPago")=='credito' }}>Crédito</option>
+                    <option value="transferencia"
+                            {{ 'selected' if item.get("metodoPago")=='transferencia' }}>Transferencia</option>
+                    </select>
+                </label>
+            </div>
+            <label>
+                <input type="checkbox"
+                       name="privado"
+                       value="1"
+                       {{ 'checked' if item.get("privado") }}>Solo yo puedo ver este movimiento
+            </label>
+            <button style="width:100%">Guardar movimiento →</button>
+        </form>
+    </section>
+{% endblock %}

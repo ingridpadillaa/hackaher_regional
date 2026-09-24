@@ -1,1 +1,85 @@
-{% extends 'base.html' %}{% block content %}<div class="row page-heading"><div><span class="eyebrow">CADA PESO TIENE UNA HISTORIA</span><h1>Movimientos</h1><p>Lo que entra, lo que sale y lo que aprendes.</p></div><a href="/movimientos/nuevo" class="button">＋ Agregar</a></div><div class="tabs"><a class="selected" href="/movimientos">Mis movimientos</a><a href="/movimientos/reportes">Reportes</a><a href="/movimientos/importar/foto">▧ Ticket</a><a href="/movimientos/importar/voz">♫ Voz</a><a href="/movimientos/importar/recibo">ϟ Recibo</a><a href="/movimientos/importar/pdf">▤ PDF</a></div><section class="card"><form class="filters" method="get"><label>Categoría<select name="categoria"><option value="">Todas</option>{% for category in categories %}<option {{ 'selected' if request.args.get('categoria')==category }}>{{ category }}</option>{% endfor %}</select></label><label>Integrante<select name="integranteId"><option value="">Todos</option>{% for member in members %}<option value="{{ member.id }}" {{ 'selected' if request.args.get('integranteId')==member.id }}>{{ member.nombre }}</option>{% endfor %}</select></label><label>Método<select name="metodoPago"><option value="">Todos</option>{% for method in ['efectivo','debito','credito','transferencia'] %}<option {{ 'selected' if request.args.get('metodoPago')==method }}>{{ method }}</option>{% endfor %}</select></label><label>Origen<select name="origen"><option value="">Todos</option>{% for origin in ['manual','foto','voz','recibo','pdf','banco'] %}<option {{ 'selected' if request.args.get('origen')==origin }}>{{ origin }}</option>{% endfor %}</select></label><button class="secondary">Filtrar</button></form>{% for group in movements|groupby('fecha')|reverse %}<h3 class="section-title">{{ group.grouper }}</h3>{% for item in group.list %}<div class="list-row"><span class="list-icon">{{ categories.get(item.categoria,'◇') }}</span><div class="detail"><strong>{{ item.descripcion }}</strong><p class="subtle">{{ item.categoria }} · {{ item.metodoPago }} {% if item.privado %}· Privado{% endif %}</p><span class="pill">{{ item.origen }}</span></div><strong class="{{ 'income' if item.tipo=='ingreso' else 'expense' if item.tipo=='gasto' else '' }}">{{ '+' if item.tipo=='ingreso' else '−' if item.tipo=='gasto' else '↔' }}{{ item.monto|money }}</strong>{% if item.integranteId==g.user.uid %}<form class="inline" method="post" action="/movimientos/{{ item.id }}/borrar" onsubmit="return confirm('¿Borrar este movimiento?')"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><button class="secondary" aria-label="Borrar movimiento">×</button></form>{% endif %}</div>{% endfor %}{% else %}<div class="empty">Todavía no hay movimientos. Tu primer registro es un gran comienzo.</div>{% endfor %}</section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+    <div class="row page-heading">
+        <div>
+            <span class="eyebrow">CADA PESO TIENE UNA HISTORIA</span>
+            <h1>Movimientos</h1>
+            <p>Lo que entra, lo que sale y lo que aprendes.</p>
+        </div>
+        <a href="/movimientos/nuevo" class="button">＋ Agregar</a>
+    </div>
+    <div class="tabs">
+        <a class="selected" href="/movimientos">Mis movimientos</a>
+        <a href="/movimientos/reportes">Reportes</a>
+        <a href="/movimientos/importar/foto">▧ Ticket</a>
+        <a href="/movimientos/importar/voz">♫ Voz</a>
+        <a href="/movimientos/importar/recibo">ϟ Recibo</a>
+        <a href="/movimientos/importar/pdf">▤ PDF</a>
+    </div>
+    <section class="card">
+        <form class="filters" method="get">
+            <label>
+                Categoría<select name="categoria">
+                <option value="">Todas</option>
+                {% for category in categories %}
+                    <option {{ 'selected' if request.args.get("categoria")==category }}>{{ category }}</option>
+                {% endfor %}
+                </select>
+            </label>
+            <label>
+                Integrante<select name="integranteId">
+                <option value="">Todos</option>
+                {% for member in members %}
+                    <option value="{{ member.id }}"
+                            {{ 'selected' if request.args.get("integranteId")==member.id }}>{{ member.nombre }}</option>
+                {% endfor %}
+                </select>
+            </label>
+            <label>
+                Método<select name="metodoPago">
+                <option value="">Todos</option>
+                {% for method in ['efectivo','debito','credito','transferencia'] %}
+                    <option {{ 'selected' if request.args.get("metodoPago")==method }}>{{ method }}</option>
+                {% endfor %}
+                </select>
+            </label>
+            <label>
+                Origen<select name="origen">
+                <option value="">Todos</option>
+                {% for origin in ['manual','foto','voz','recibo','pdf','banco'] %}
+                    <option {{ 'selected' if request.args.get("origen")==origin }}>{{ origin }}</option>
+                {% endfor %}
+                </select>
+            </label>
+            <button class="secondary">Filtrar</button>
+        </form>
+        {% for group in movements|groupby('fecha')|reverse %}
+            <h3 class="section-title">{{ group.grouper }}</h3>
+            {% for item in group.list %}
+                <div class="list-row">
+                    <span class="list-icon">{{ categories.get(item.categoria,'◇') }}</span>
+                    <div class="detail">
+                        <strong>{{ item.descripcion }}</strong>
+                        <p class="subtle">{{ item.categoria }} · {{ item.metodoPago }} {% if item.privado %}· Privado{% endif %}</p>
+                        <span class="pill">{{ item.origen }}</span>
+                    </div>
+                    <strong class="{{ 'income' if item.tipo=='ingreso' else 'expense' if item.tipo=='gasto' else '' }}">{{ '+' if item.tipo=='ingreso' else '−' if item.tipo=='gasto' else '↔' }}{{ item.monto|money }}</strong>
+                    {% if item.integranteId==g.user.uid %}
+                        <a href="/movimientos/{{ item.id }}/editar"
+                           class="subtle"
+                           aria-label="Editar movimiento">✎</a>
+                        <form class="inline"
+                              method="post"
+                              action="/movimientos/{{ item.id }}/borrar"
+                              onsubmit="return confirm('¿Borrar este movimiento?')">
+                            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                            <button class="secondary" aria-label="Borrar movimiento">×</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty">Todavía no hay movimientos. Tu primer registro es un gran comienzo.</div>
+        {% endfor %}
+    </section>
+{% endblock %}

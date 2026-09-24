@@ -1,1 +1,91 @@
-{% extends 'base.html' %}{% block content %}<section class="card form-card"><span class="eyebrow">TÚ TIENES LA ÚLTIMA PALABRA</span><h1>¿Así quedó?</h1>{% if draft.demo %}<p class="notice">Este es un ejemplo simulado; no se leyó tu archivo.</p>{% endif %}<form method="post"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">{% for item in draft.movements %}<div class="receipt"><strong>{{ item.descripcion }}</strong><p>Tu {{ 'ingreso' if item.tipo=='ingreso' else 'gasto' }} de {{ item.monto|money }} se irá a <strong>{{ item.categoria }}</strong>.</p><div class="grid"><label>{{ '¿Cuánto fue?' if not item.monto else 'Monto' }}<input name="amount_{{ loop.index0 }}" type="number" min=".01" step=".01" value="{{ item.monto or '' }}" required></label><label>Cambiar categoría<select name="category_{{ loop.index0 }}">{% for category in categories %}<option {{ 'selected' if category==item.categoria }}>{{ category }}</option>{% endfor %}</select></label><label>Fecha<input type="date" name="date_{{ loop.index0 }}" value="{{ item.fecha }}" max="{{ today }}" required></label><label>Método<select name="method_{{ loop.index0 }}">{% for method in ['efectivo','debito','credito','transferencia'] %}<option {{ 'selected' if item.metodoPago==method }}>{{ method }}</option>{% endfor %}</select></label></div>{% if draft.movements|length>1 %}<label><input type="checkbox" name="skip_{{ loop.index0 }}">Omitir este movimiento</label>{% endif %}</div>{% endfor %}{% if draft.origin=='pdf' %}<label>Cuenta (alias para evitar duplicados con el banco)<input name="account" placeholder="Por ejemplo: demo-debito"></label>{% endif %}{% if draft.receipt and draft.receipt.productos %}<h3>Productos detectados</h3>{% for product in draft.receipt.productos %}<div class="list-row"><div class="detail">{{ product.nombre_normalizado }} × {{ product.cantidad }}<select name="product_category_{{ loop.index0 }}" aria-label="Categoría de {{ product.nombre_normalizado }}">{% for category in categories %}<option {{ 'selected' if category==product.categoria }}>{{ category }}</option>{% endfor %}</select></div><strong>{{ (product.precio_unitario*product.cantidad)|money }}</strong></div>{% endfor %}<label><input type="checkbox" name="split">Dividir por producto</label>{% endif %}{% if draft.origin=='recibo' %}<label>Vincular al pago fijo<select name="payment_id"><option value="">No vincular</option>{% for payment in payments %}<option value="{{ payment.id }}">{{ payment.nombre }}</option>{% endfor %}</select></label>{% endif %}<button style="width:100%">Sí, guardar {{ 'todos' if draft.movements|length>1 else '' }} →</button></form></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+    <section class="card form-card">
+        <span class="eyebrow">TÚ TIENES LA ÚLTIMA PALABRA</span>
+        <h1>¿Así quedó?</h1>
+        {% if draft.demo %}
+            <p class="notice">Este es un ejemplo simulado; no se leyó tu archivo.</p>
+        {% endif %}
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+            {% for item in draft.movements %}
+                <div class="receipt">
+                    <strong>{{ item.descripcion }}</strong>
+                    <p>Tu {{ 'ingreso' if item.tipo=='ingreso' else 'gasto' }} de {{ item.monto|money }} se irá a <strong>{{ item.categoria }}</strong>.</p>
+                    <div class="grid">
+                        <label>
+                            {{ '¿Cuánto fue?' if not item.monto else 'Monto' }}<input name="amount_{{ loop.index0 }}"
+       type="number"
+       min=".01"
+       step=".01"
+       value="{{ item.monto or '' }}"
+       required>
+                        </label>
+                        <label>
+                            Cambiar categoría<select name="category_{{ loop.index0 }}">
+                            {% for category in categories %}
+                                <option {{ 'selected' if category==item.categoria }}>{{ category }}</option>
+                            {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            Fecha<input type="date"
+       name="date_{{ loop.index0 }}"
+       value="{{ item.fecha }}"
+       max="{{ today }}"
+       required>
+                        </label>
+                        <label>
+                            Método<select name="method_{{ loop.index0 }}">
+                            {% for method in ['efectivo','debito','credito','transferencia'] %}
+                                <option {{ 'selected' if item.metodoPago==method }}>{{ method }}</option>
+                            {% endfor %}
+                            </select>
+                        </label>
+                    </div>
+                    {% if draft.movements|length>1 %}
+                        <label>
+                            <input type="checkbox" name="skip_{{ loop.index0 }}">Omitir este movimiento
+                        </label>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            {% if draft.origin=="pdf" %}
+                <label>
+                    Cuenta (alias para evitar duplicados con el banco)<input name="account"
+       placeholder="Por ejemplo: demo-debito">
+                </label>
+            {% endif %}
+            {% if draft.receipt and draft.receipt.productos %}
+                <h3>Productos detectados</h3>
+                {% for product in draft.receipt.productos %}
+                    <div class="list-row">
+                        <div class="detail">
+                            {{ product.nombre_normalizado }} × {{ product.cantidad }}<select name="product_category_{{ loop.index0 }}"
+        aria-label="Categoría de {{ product.nombre_normalizado }}">
+                            {% for category in categories %}
+                                <option {{ 'selected' if category==product.categoria }}>{{ category }}</option>
+                            {% endfor %}
+                            </select>
+                        </div>
+                        <strong>{{ (product.precio_unitario*product.cantidad)|money }}</strong>
+                    </div>
+                {% endfor %}
+                <label>
+                    <input type="checkbox" name="split">Dividir por producto
+                </label>
+            {% endif %}
+            {% if draft.origin=="recibo" %}
+                <label>
+                    Vincular al pago fijo<select name="payment_id">
+                    <option value="">No vincular</option>
+                    {% for payment in payments %}
+                        <option value="{{ payment.id }}">{{ payment.nombre }}</option>
+                    {% endfor %}
+                    </select>
+                </label>
+            {% endif %}
+            <button style="width:100%">Sí, guardar {{ 'todos' if draft.movements|length>1 else '' }} →</button>
+        </form>
+    </section>
+{% endblock %}
