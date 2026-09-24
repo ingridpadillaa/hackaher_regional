@@ -17,7 +17,7 @@ def predict(tickets, today=None):
             continue
         interval = sum((b - a).days for a, b in zip(days, days[1:])) / (len(days) - 1)
         next_day = days[-1] + timedelta(days=interval)
-        if next_day <= today + timedelta(days=7):
+        if next_day <= today + timedelta(days=3):
             result.append(dict(product=product, next=next_day.isoformat(), interval=round(interval, 1)))
     return result
 

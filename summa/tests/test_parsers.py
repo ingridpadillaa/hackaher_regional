@@ -1,4 +1,3 @@
-
 from app.services.llm import redact
 from app.services.voice_parser import parse_voice
 from tests.conftest import csrf
@@ -6,9 +5,10 @@ from tests.conftest import csrf
 
 def test_voice_unavailable_never_invents(monkeypatch):
     import pytest
-    monkeypatch.delenv('GEMINI_API_KEY',raising=False)
-    with pytest.raises(ValueError,match='Jami no está disponible'):
-        parse_voice('ayer gasté 150 en gasolina',allow_ai=True)
+
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    with pytest.raises(ValueError, match="Jami no está disponible"):
+        parse_voice("ayer gasté 150 en gasolina", allow_ai=True)
 
 
 def test_pdf_demo_and_receipt(logged):

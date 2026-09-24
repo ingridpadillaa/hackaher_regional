@@ -731,3 +731,5 @@ canvas {
 
 :root {--bg:#FFF7F4;--surface:#FFFFFF;--surface-soft:#F7EFFA;--brand-pink:#EC3A6A;--brand-coral:#F58A72;--brand-gold:#F6B73C;--brand-gold-dark:#B8741A;--blush:#FCEBE6;--lavender:#CDB9EC;--ink:#17131A;--muted:#7B7280;--success:#2FA66A;--warning:#F2B02E;--danger:#E5484D;--gradient-hero:linear-gradient(165deg,#FDF1F3 0%,#F7C6CF 45%,#F2A98F 75%,#C9A4C8 100%);--gradient-card:linear-gradient(150deg,#F9C9D6,#F5A993);--radius-card:24px;--radius-pill:999px}
 body{background:var(--bg);color:var(--ink)}.hero{background:var(--gradient-hero)}.card{border-radius:var(--radius-card)}.copilot-launch{background:var(--brand-pink)}.bottom-nav a.active{color:var(--brand-pink)}.jami-art{width:min(220px,60vw);height:auto;object-fit:contain;border-radius:24px}.budget-hero{background:var(--gradient-card)}
+
+.store-offer{padding:20px;margin:12px 0;border-radius:24px;border:2px solid}.rank-1{border-color:var(--success)}.rank-2{border-color:var(--warning)}.rank-3{border-color:var(--danger)}

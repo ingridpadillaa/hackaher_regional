@@ -31,6 +31,9 @@ COLUMN_MAP = {
     "NOMBRECOMERCIAL": "tienda",
     "ESTADO": "estado",
     "MUNICIPIO": "municipio",
+    "DIRECCION": "direccion",
+    "LATITUD": "lat",
+    "LONGITUD": "lng",
 }
 REQUIRED = {"producto", "precio", "fecha", "estado"}
 PORTAL = "https://datos.profeco.gob.mx/datos_abiertos/"
@@ -153,8 +156,12 @@ def chunks(path, tempdir):
 
 def sync_prices(repository, file_path=None):
     started = time.monotonic()
-    meta_path = "profecoMeta/estado"
-    meta = repository.get(meta_path) or {}
+    from .price_db import COLUMNS, connect
+    from .products import product_id
+
+    with connect(repository) as target:
+        row = target.execute("SELECT huella FROM profeco_meta ORDER BY fecha DESC LIMIT 1").fetchone()
+    meta = {"ultimaHuella": row["huella"]} if row else {}
     try:
         with tempfile.TemporaryDirectory(prefix="summa-profeco-") as tempdir:
             path = Path(file_path) if file_path else Path(tempdir) / "download"
@@ -169,11 +176,7 @@ def sync_prices(repository, file_path=None):
                 return {"changed": False, "rows": 0}
             staging = sqlite3.connect(Path(tempdir) / "staging.sqlite")
             staging.execute("CREATE TABLE prices (id TEXT PRIMARY KEY, day TEXT, value TEXT)")
-            states = {
-                key_text(s)
-                for s in os.getenv("PROFECO_ESTADOS", "NUEVO LEON,TAMAULIPAS").split(",")
-                if s.strip()
-            }
+            states = {key_text(s) for s in os.getenv("PROFECO_ESTADOS", "").split(",") if s.strip()}
             municipalities = {
                 key_text(s) for s in os.getenv("PROFECO_MUNICIPIOS", "").split(",") if s.strip()
             }
@@ -224,9 +227,17 @@ def sync_prices(repository, file_path=None):
                                 + normalize(store)
                                 + "|"
                                 + key_text(record.get("municipio", ""))
+                                + "|"
+                                + key_text(record.get("direccion", ""))
                             ).encode()
                         ).hexdigest()
                         value = {k: record.get(k, "") for k in COLUMN_MAP.values()}
+                        value["producto_id"] = product_id(product)
+                        for coordinate in ("lat", "lng"):
+                            try:
+                                value[coordinate] = float(value[coordinate])
+                            except (ValueError, TypeError):
+                                value[coordinate] = None
                         value.update(
                             producto=product, tienda=store, precio=price, fecha=day, fuente="profeco"
                         )
@@ -235,25 +246,31 @@ def sync_prices(repository, file_path=None):
                             (key, day, json.dumps(value)),
                         )
                 staging.commit()
-                count = 0
-                cursor = staging.execute("SELECT id,value FROM prices")
-                while rows := cursor.fetchmany(400):
-                    repository.batch_put({"precios/profeco-" + key: json.loads(value) for key, value in rows})
-                    count += len(rows)
-                meta.update(
-                    ultimaHuella=fingerprint,
-                    ultimaActualizacion=datetime.now(UTC).isoformat(),
-                    filasLeidas=read,
-                    filasCargadas=count,
-                    errores=[],
-                )
-                repository.put(meta_path, meta)
+                count = staging.execute("SELECT COUNT(*) FROM prices").fetchone()[0]
+                if not count:
+                    raise ValueError("El archivo no contiene precios para los filtros seleccionados.")
+                with connect(repository) as target:
+                    target.execute("BEGIN IMMEDIATE")
+                    target.execute("DELETE FROM precios_profeco")
+                    cursor = staging.execute("SELECT value FROM prices")
+                    while rows := cursor.fetchmany(100000):
+                        records = [json.loads(row[0]) for row in rows]
+                        target.executemany(
+                            "INSERT OR REPLACE INTO precios_profeco VALUES ("
+                            + ",".join("?" for _ in COLUMNS)
+                            + ")",
+                            [tuple(record.get(k) for k in COLUMNS) for record in records],
+                        )
+                    target.execute(
+                        "INSERT OR REPLACE INTO profeco_meta VALUES (?,?,?,?)",
+                        (fingerprint, datetime.now(UTC).isoformat(), count, "[]"),
+                    )
                 return {"changed": True, "rows": count}
             finally:
                 staging.close()
     except Exception as error:
         meta["errores"] = [str(error)[:300]]
-        repository.put(meta_path, meta)
+
         raise ValueError(
             "No se actualizaron los precios de PROFECO. Revisa el archivo o usa --file; los precios anteriores siguen disponibles."
         ) from error

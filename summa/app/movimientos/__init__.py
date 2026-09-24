@@ -280,6 +280,8 @@ def confirm(draft_id):
                             precio=p["precio_unitario"],
                             fecha=receipt["fecha"],
                             fuente="ticket",
+                            municipio=(repo().get(base) or {}).get("municipio", ""),
+                            estado=(repo().get(base) or {}).get("estado", ""),
                             demo=draft["demo"],
                         ),
                     )
