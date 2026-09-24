@@ -1,38 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function member(hid) { return signedIn() && exists(/databases/$(database)/documents/hogares/$(hid)/integrantes/$(request.auth.uid)); }
-    match /usuarios/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      // Membership, role and consent are validated in Flask, never by a client write.
-      allow update: if signedIn() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre']) && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 80;
-      allow create, delete: if false;
-    }
-    match /hogares/{hid} {
-      allow read: if member(hid);
-      allow write: if false;
-      match /movimientos/{mid} {
-        allow read: if member(hid) && (!resource.data.privado || resource.data.integranteId == request.auth.uid);
-        allow write: if false;
-      }
-      match /conexiones/{id} {
-        allow read: if member(hid) && resource.data.uid == request.auth.uid;
-        allow write: if false;
-      }
-      // Drafts, streak evidence, summaries (which may include private movements),
-      // notification quotas and metrics are backend-only.
-      match /integrantes/{uid} { allow read: if member(hid); allow write: if false; }
-      match /{collection}/{doc} {
-        allow read: if member(hid) && collection in ['pagosFijos', 'cuentas', 'tickets', 'mandado', 'preciosTicket', 'alertas', 'productosHogar', 'carrito', 'metas', 'racha', 'notificaciones', 'recomendaciones', 'presupuesto', 'reglasCategoria'];
-        allow write: if false;
-      }
-    }
-    match /precios/{id} { allow read: if signedIn(); allow write: if false; }
-    match /eventosTemporada/{id} { allow read: if signedIn(); allow write: if false; }
-    match /secretosConexion/{id} { allow read, write: if false; }
-    match /estadoProveedores/{id} { allow read, write: if false; }
-    match /_healthcheck/{id} { allow read, write: if false; }
+    // React calls authenticated Functions. Authorization is checked there before
+    // every Admin SDK operation. No client can create membership or write finance data.
     match /{document=**} { allow read, write: if false; }
   }
 }

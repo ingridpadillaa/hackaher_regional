@@ -31,3 +31,17 @@ summa/app/connectors/fixtures/recorded/
 **/.env
 **/__pycache__/
 **/data/precios.db*
+
+# React and Firebase Functions
+node_modules/
+**/dist/
+**/lib/
+**/*.tsbuildinfo
+**/.secret.local
+ui-debug.log
+!/summa/package.json
+!/summa/package-lock.json
+!/summa/web/package.json
+!/summa/web/tsconfig.json
+!/summa/functions/package.json
+!/summa/functions/tsconfig.json

@@ -4,6 +4,8 @@
 
 > Actualización de integración: el equipo autorizó Firebase Blaze. La configuración real se lee únicamente del `.env` existente, sin copiar sus valores ni versionarlos. Firebase Admin usa archivo o ADC con proyecto explícito; el frontend usa solo Authentication. Los archivos de usuario continúan procesándose en memoria. Gemini usa exclusivamente GEMINI_MODEL configurado.
 
+> Actualización de producto y stack (septiembre de 2026): la instrucción más reciente del equipo aprueba React + Vite + TypeScript y Firebase Blaze (Hosting, Auth, Firestore y Functions Node.js). La UI vigente tiene solo Inicio, Carrito, Simulador y Perfil; cuenta → hogar → personalización es obligatoria una vez. El PDF UI/UX y el mensaje del equipo sustituyen las pantallas y navegación anteriores. El README de summa describe el estado implementado y los pendientes. Las secciones Flask/Spark de este archivo son referencia histórica donde contradigan esta actualización.
+
 ## 0. CAMBIOS RESPECTO A LA VERSIÓN ANTERIOR (aplícalos sobre lo ya construido)
 
 1. **El producto se llama Summa.** El asistente de IA se llama **Jami**. Reemplaza "Cochinito" en todo el código, textos y plantillas.

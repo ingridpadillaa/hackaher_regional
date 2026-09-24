@@ -1,38 +1,128 @@
 # Summa · Jami
-Aplicación Flask del hogar. Cuentas nuevas vacías; no se simulan recibos ni precios.
 
-Consulta primero [la guía de conexión Firebase/Gemini y prueba local](docs/CONEXIONES.md). El `.env` real se lee de la raíz; no se copia al proyecto ni a `.env.example`.
+Plataforma del hogar con **React + Vite + TypeScript + Tailwind CSS**, conectada mediante funciones autenticadas a Firebase. Interfaz en español de México, basada en las cinco diapositivas de `HackHer Regional UI - UX.pdf` y en las indicaciones del equipo.
 
-## Desarrollo
-Python 3.12. Crea un entorno virtual, instala `requirements.txt`, usa el `.env` existente de la raíz y configura `FLASK_SECRET_KEY` (secreto aleatorio persistente).
-Para trabajar sin Firebase activa explícitamente `LOCAL_MODE=true`; SQLite local no se usa como sustituto silencioso de Firestore. `DEMO_MODE=true` habilita únicamente el banco de prueba.
-Arranque: `flask --app app run --host 0.0.0.0 --port 5055`. En el celular abre la IP LAN de la computadora en el mismo Wi-Fi. Para HTTPS utiliza un túnel ngrok o Cloudflare Tunnel y agrega su dominio a Firebase Authentication.
-Producción: `gunicorn 'app:create_app()' --bind 0.0.0.0:8080` o Docker. Configura Firebase Auth (Google/correo), Firestore Spark, credenciales ADC o GOOGLE_APPLICATION_CREDENTIALS, FIREBASE_PROJECT_ID y las variables FIREBASE_WEB_*. El JSON web anterior sigue siendo compatible. Nunca subas credenciales al repositorio.
+## Estado
+
+La aplicación React está implementada en `web/` y el backend TypeScript en `functions/`. Compila y su recorrido principal se probó en Chrome móvil con Firebase Emulator Suite. El despliegue a `hackaher` **no se ejecutó: el permiso para publicar fue rechazado**. La versión Python permanece en `app/` como referencia histórica; no participa en el build de React.
+
+## Cuatro módulos
+
+El acceso sigue **crear cuenta/iniciar sesión → crear o unirse a un hogar → personalizar → Inicio**. Los perfiles incluyen nombre, edad, parentesco, estudios, ocupación, ingreso y periodicidad. La personalización es persistente: al regresar, una cuenta completa abre Inicio. La barra inferior aparece después del onboarding y contiene exactamente cuatro destinos.
+
+| Módulo    | Implementación                                                                                                                                                                                                                                     |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Inicio    | Presupuesto mensual, gastos por categoría, calendario con la próxima fecha relevante, historial por mes y campana que abre un panel lateral. Alertas de presupuesto y recomendaciones de ahorro; pronósticos solo cuando hay historial comparable. |
+| Carrito   | Búsqueda en el catálogo, lista persistente, selección, cantidades y comparación de hasta tres tiendas. Incluye Aurrera, Walmart y H‑E‑B con enlaces oficiales.                                                                                     |
+| Simulador | Creación/edición de metas con título y monto, barra de progreso y simulación de aportes diarios, semanales o mensuales. Racha calculada únicamente a partir de evidencia bancaria verificada.                                                      |
+| Perfil    | Integrantes, estudios, trabajo e ingresos, estilo de vida, prioridades, tono de Jami, notificaciones y consentimientos. La persona administradora edita la configuración compartida.                                                               |
+
+**Registrar movimiento** abre un modal con gasto/ingreso. Manual permite monto, categoría y nota; PDF permite subir un archivo; Audio permite grabar y editar la transcripción; Ticket permite abrir la cámara o elegir una foto. La IA propone categorías para métodos no manuales y requiere confirmación antes del guardado. Todos los movimientos confirmados aparecen en el historial. Montos en MXN, aunque el ejemplo visual del PDF use otro símbolo.
+
+Las cifras y personas de las diapositivas son ejemplos visuales y no se cargan como datos de usuario. El logo se muestra desde una imagen original extraída del PDF; las ilustraciones de Jami reutilizan los recursos existentes del proyecto.
 
 ## Firebase
-Desde este directorio: `firebase deploy --only firestore:rules,firestore:indexes`.
-Los accesos de escritura pasan por Flask para proteger membresías, importes y resúmenes atómicos. Las reglas del cliente limitan lectura al hogar y bloquean secretos. `/health` muestra configuración faltante en desarrollo o a administradores autenticados.
-No se usa Storage ni servicios que requieran Blaze. Fotos y documentos se reciben en memoria (máximo 10 MB) y se descartan. Solo se guardan datos confirmados. PROFECO se almacena en SQLite local.
 
-## Integraciones
-GEMINI_API_KEY, GEMINI_MODEL y consentimiento explícito habilitan Jami. Sin llave aparece un mensaje de indisponibilidad con captura manual. Syncfy/Finerio necesitan credenciales y contratos verificados; sus adaptadores no inventan respuestas.
-Logo oficial pendiente de entrega. Las ilustraciones originales de Jami están en `app/static/img/`; el nombre Summa se muestra como texto.
-Auditoría de datos retirados: `docs/AUDITORIA_DATOS.md`.
+- Proyecto: **`hackaher`**, plan **Blaze**.
+- Firestore: **`(default)`**, ubicación **`nam5`**, verificada.
+- Functions: segunda generación, Node.js 22, región `us-central1`, máximo 3 instancias.
+- Hosting: `web/dist`, HTTPS y reescritura de rutas a `index.html`.
+- Authentication: correo/contraseña habilitado; dominios `localhost`, `hackaher.web.app` y `hackaher.firebaseapp.com` verificados. El botón Google requiere que el proveedor Google también esté habilitado; ese flujo no se ha probado con una cuenta real.
+- Se habilitó Secret Manager y se guardó la llave sandbox de Syncfy en `SUMMA_INTEGRATIONS`.
 
-## Verificación
-`python -m pytest -q`. Las pruebas usan una base temporal y fixtures aislados; nunca la base real.
+La función callable `api` comprueba identidad, pertenencia al hogar y autorización en cada operación. Las escrituras de movimientos son idempotentes por identificador de solicitud. Firestore niega todo acceso directo del navegador: React usa Functions, y estas usan Admin SDK con comprobaciones explícitas. No se envían credenciales Admin al frontend.
 
-Proveedor alternativo opcional: instala `openai`, configura `LLM_PROVIDER=openai`, `OPENAI_API_KEY` y `OPENAI_MODEL` compatible con visión y Structured Outputs. Extracción mediante Responses parse con Pydantic y store=false; referencia: https://developers.openai.com/api/docs/guides/structured-outputs . El chat con function calling utiliza Gemini.
+El nuevo esquema comparte `usuarios` y `hogares`, con subcolecciones `members`, `movements`, `goals`, `cart`, `drafts`, `bankEvidence`, `notifications` y `readNotifications`. Usa `invitations`, `bankConnections`, `rateLimits` y `products` como colecciones de backend. **No hay migración automática de datos de la versión Flask**; esta implementación se preparó para el proyecto sin datos reales indicado por el equipo.
 
-## Mantenimiento sin servicios Blaze
-Ejecuta desde este directorio con `flask --app app` seguido de:
-- `seed-demo --email CUENTA --confirm` (cuenta de ensayo aparte; `--reset` solo para esDemo).
-- `profeco-sync --file RUTA` (CSV, ZIP o XLSX oficial); sin `--file`, descubre el archivo anual en el portal PROFECO.
-- `sync-banks`, `provider-health`, `daily-alerts`, `evaluar-rachas`, `generar-recomendaciones`.
-Los jobs operativos tienen también `POST /jobs/NOMBRE` con `X-Cron-Secret`. El seed destructivo se mantiene exclusivamente como CLI con confirmación. No programes llamadas a jobs sin el secreto. Las tareas son repetibles y usan bloqueos persistidos.
+## Desarrollo local
 
-En Render usa el blueprint `summa/render.yaml` desde la raíz del repo y agrega credenciales como secretos del entorno. Su disco gratuito es efímero: la base de precios necesita recarga tras reinicios; Firestore conserva los datos de hogares. Para demo estable se recomienda ejecución local. No hay requisitos de Cloud Storage, Cloud Run, Scheduler ni Secret Manager.
+Requisitos: Node.js 22, npm, Firebase CLI y Java compatible con el emulador Firestore. En esta computadora las pruebas se ejecutaron con Node.js 24; el runtime de despliegue está fijado a 22.
 
-Configuración de supermercados: `data/supermercados.json` solo guarda destinos oficiales; no precios ni sucursales. La búsqueda Chedraui fue verificada. Para VTEX, completa SKU reales por producto; sin todos los SKU, el botón abre una búsqueda y permite copiar la lista. Compara solo con ≥70% de cobertura, marca los faltantes estimados y muestra hasta tres sucursales.
+Desde `summa/`:
 
-Consulta `docs/ESTADO.md` para las verificaciones realizadas y las integraciones pendientes, y `docs/DEMO.md` para el recorrido. Para usar el adaptador alternativo OpenAI instala opcionalmente su SDK; no es necesario para el flujo Gemini.
+```sh
+npm install
+cp web/.env.example web/.env.local
+```
+
+Completa en `web/.env.local` la configuración pública de la app web Firebase. **No agregues secretos a variables `VITE_*`: se incluyen en el navegador.** La configuración pública local de `hackaher` ya se descargó durante la preparación y no se versiona.
+
+Para trabajar con datos aislados, en dos terminales:
+
+```sh
+npm run build --workspace functions
+npm run emulators
+```
+
+```sh
+VITE_USE_EMULATORS=true npm run dev --workspace web -- --port 5173
+```
+
+Abre `http://127.0.0.1:5173`. Los emuladores usan el proyecto ficticio `demo-summa`: Auth en 9099, Firestore en 8085, Functions en 5001 y consola local en 4000. Para pruebas sin proveedores externos, `functions/.secret.local` debe contener `SUMMA_INTEGRATIONS={}`. Este archivo está ignorado por Git. La prueba explícita de Syncfy requiere el secreto sandbox local.
+
+## Integraciones y límites actuales
+
+### Gemini: captura PDF, audio y ticket
+
+El flujo y la validación están implementados, pero **falta configurar y probar la clave y el modelo de Gemini**. El backend lee `geminiKey` y `geminiModel` del secreto JSON `SUMMA_INTEGRATIONS`, equivalentes a `GEMINI_API_KEY` y `GEMINI_MODEL` en la versión anterior. Sin ellos se informa la indisponibilidad y el registro manual continúa funcionando.
+
+Se aceptan archivos de hasta 10 MB; el backend valida tipo, firma y tamaño. Los originales se procesan en memoria. Solo se guarda el resultado extraído como borrador de confirmación, con vencimiento de una hora. Los archivos no se suben a Storage. El borrado automático por TTL de borradores vencidos y contadores `rateLimits` deberá habilitarse en Firestore antes de un uso sostenido; la autorización ya rechaza borradores vencidos.
+
+### Syncfy/Paybook: sandbox
+
+La llave proporcionada se validó con una consulta al API oficial. También se comprobó en Chrome que una sesión creada por el backend abre el widget oficial sin errores; la sincronización completa de una institución aún no se ha recorrido. El backend crea un usuario seudónimo por cuenta y entrega solo un token de sesión breve al widget oficial, que recibe directamente las credenciales de la institución. Summa no captura contraseñas bancarias.
+
+`connectBank` abre la sesión; `syncBank` consulta cuentas/transacciones y conserva únicamente conteos y estado de la prueba. Todo se etiqueta **Sandbox · Datos de prueba**. No se importan saldos de prueba al presupuesto ni se adjudican días de racha o aportes a metas con esos datos.
+
+**Pendiente para banca real:** contrato/llave de producción, validación de tipos de cuenta y transferencias, importación paginada, sincronización diaria y conciliación del ahorro. El cálculo de racha está probado con evidencia aislada, pero todavía no existe una fuente productiva que escriba esa evidencia ni alimente el avance real de las metas.
+
+### Carritos y precios
+
+El catálogo `products` debe cargarse desde datos reales. Cada producto incluye `name`, `searchName` en minúsculas, `unit` y `offers` por tienda (`aurrera`, `walmart`, `heb`), con `price`, `date`, `source`, `municipality` y, opcionalmente, `productUrl` oficial. Solo se comparan listas completas con precios de hasta 30 días del municipio del hogar. No se inventan precios ni se clasifican como más baratas tiendas sin datos.
+
+**Pendiente:** cargar el catálogo/PROFECO y obtener integraciones verificadas para transferir carritos completos. Por ahora, los botones permiten copiar la lista y abrir el sitio oficial, y lo explican expresamente; no afirman que el carrito externo esté armado. Los productos manuales necesitan vinculación a identificadores de catálogo para poder compararse.
+
+### Tendencias
+
+Se incluyen fechas mexicanas fijas (Reyes, Día del Niño, Día de las Madres, Fiestas Patrias, Día de Muertos y Navidad). El gasto adicional usa el historial comparable del hogar; sin historial aparece un estado vacío, no un monto inventado. Las fechas variables como regreso a clases y Buen Fin requieren un calendario oficial actualizado antes de incorporarse.
+
+## Pruebas y compilación
+
+```sh
+npm test
+npm run test:integration
+node scripts/browser.mjs
+npm run build
+```
+
+`npm test` prueba cálculos y validación mediante el runner de Node. Integración necesita los emuladores activos. La prueba de navegador necesita Vite en modo emulador y Google Chrome; crea solo cuentas y datos locales de prueba. Comprueba el onboarding obligatorio, cuatro módulos, persistencia, simulación y el regreso a Inicio al iniciar sesión de nuevo. Las capturas quedan en `/tmp/summa-ui/`.
+
+La prueba bancaria explícita se ejecuta con `node scripts/bank-smoke.mjs`: además del entorno local, utiliza el sandbox de Syncfy. No forma parte de los tests automáticos ordinarios.
+
+## Publicación pendiente
+
+Cuando se autorice el despliegue, desde `summa/`:
+
+```sh
+npm run deploy
+```
+
+Esto compila ambos paquetes y ejecuta:
+
+```sh
+firebase deploy --project hackaher --only hosting,functions,firestore:rules,firestore:indexes
+```
+
+Para desplegar únicamente las reglas e índices:
+
+```sh
+firebase deploy --project hackaher --only firestore:rules,firestore:indexes
+```
+
+No se ha ejecutado un despliegue exitoso ni una prueba pública. El primer despliegue habilitará los servicios requeridos por Functions y concederá a su identidad acceso al secreto. La facturación permanece en el mismo proyecto Blaze.
+
+## Documentación y referencia anterior
+
+`app/`, sus pruebas Python y las guías `docs/CONEXIONES.md`, `docs/ESTADO.md` y `docs/DEMO.md` describen la versión Flask. No deben usarse como instrucciones del frontend React. Se conservan para consultar lógica que aún no se haya portado.
+
+Referencias: [Firebase Hosting](https://firebase.google.com/docs/hosting/), [funciones callable](https://firebase.google.com/docs/functions/callable), [secretos](https://firebase.google.com/docs/functions/config-env), [Syncfy REST](https://github.com/Paybook/sync-rest), [widget oficial](https://github.com/Paybook/sync-widget), [variables Vite](https://vite.dev/guide/env-and-mode).

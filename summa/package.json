@@ -1,0 +1,20 @@
+{
+  "name": "summa",
+  "private": true,
+  "workspaces": [
+    "web",
+    "functions"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace web",
+    "build": "npm run build --workspace functions && npm run build --workspace web",
+    "test": "npm run test --workspace functions",
+    "test:integration": "node scripts/integration.mjs",
+    "emulators": "firebase emulators:start --project demo-summa --only auth,firestore,functions",
+    "deploy": "npm run build && firebase deploy --project hackaher --only hosting,functions,firestore:rules,firestore:indexes"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "prettier": "^3.9.9"
+  }
+}
