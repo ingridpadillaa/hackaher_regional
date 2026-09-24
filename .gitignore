@@ -53,3 +53,5 @@ ui-debug.log
 
 # Private demonstration account access
 backend/.demo-hack-access.local
+
+backend/.demo-hacka-v2-access.local

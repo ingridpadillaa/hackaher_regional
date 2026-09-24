@@ -49,8 +49,9 @@ try {
     .getByRole("button", { name: "¿Cómo van mis gastos?", exact: true })
     .click();
   await page
-    .getByText("Gemini pendiente de configuración.", { exact: false })
-    .waitFor();
+    .locator(".jami-chat-log .chat-message.assistant")
+    .nth(1)
+    .waitFor({ timeout: 90000 });
   assert.match(await page.locator(".jami-chat-log").innerText(), /27,000/);
   assert.deepEqual(errors, []);
   console.log(

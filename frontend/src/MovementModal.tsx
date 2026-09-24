@@ -22,6 +22,8 @@ export function MovementModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const [receipt, setReceipt] = useState<any>(null);
+  const [incomeKind, setIncomeKind] = useState<"regular" | "extra">("extra");
   const [type, setType] = useState<"gasto" | "ingreso">("gasto");
   const [method, setMethod] = useState<Movement["method"]>("manual");
   const [amount, setAmount] = useState("");
@@ -29,6 +31,7 @@ export function MovementModal({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [analysisWarning, setAnalysisWarning] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [transcript, setTranscript] = useState("");
   const [recording, setRecording] = useState(false);
@@ -72,6 +75,7 @@ export function MovementModal({
     setFile(null);
     setDrafts([]);
     setTranscript("");
+    setAnalysisWarning("");
     setError("");
   }
   async function startCamera() {
@@ -149,16 +153,19 @@ export function MovementModal({
     }
   }
   function selectFile(f: File | undefined) {
-    if (!f) return;
+    if (!f || busy) return;
+    setAnalysisWarning("");
     if (f.size > 10 * 1024 * 1024) {
       setError("El archivo debe pesar como máximo 10 MB.");
       return;
     }
     setFile(f);
+    setReceipt(null);
     setDrafts([]);
     setError("");
   }
   async function analyze(textOnly = false) {
+    setAnalysisWarning("");
     setBusy(true);
     setError("");
     try {
@@ -176,10 +183,17 @@ export function MovementModal({
       const result = await call("analyze", payload);
       setTranscript(result.transcript || transcript);
       setDraftId(result.draftId);
+      setReceipt(result.receipt ?? null);
+      setAnalysisWarning(
+        [result.warning, ...(result.missingFields ?? [])]
+          .filter(Boolean)
+          .join(" "),
+      );
       setDrafts(
         result.movements.map((m: Movement, i: number) => ({
           ...m,
           method,
+          learnCategory: true,
           requestId: crypto.randomUUID(),
           draftIndex: i,
         })),
@@ -204,6 +218,7 @@ export function MovementModal({
         await call("saveMovement", {
           requestId: requestId.current,
           type,
+          ...(type === "ingreso" ? { incomeKind } : {}),
           amount: Number(amount),
           category: type === "ingreso" ? "Otros" : category,
           note,
@@ -257,6 +272,19 @@ export function MovementModal({
             Ingreso
           </button>
         </div>
+        {type === "ingreso" && (
+          <Field label="Tipo de ingreso">
+            <select
+              value={incomeKind}
+              onChange={(e) =>
+                setIncomeKind(e.target.value as "regular" | "extra")
+              }
+            >
+              <option value="extra">Adicional o extraordinario</option>
+              <option value="regular">Habitual (sueldo, pensión…)</option>
+            </select>
+          </Field>
+        )}
         {type === "gasto" && (
           <>
             <h3 className="field-title">Método de registro</h3>
@@ -339,6 +367,7 @@ export function MovementModal({
                   <span>Estado de cuenta o comprobante · Máx. 10 MB</span>
                   <input
                     type="file"
+                    disabled={busy}
                     accept="application/pdf"
                     onChange={(e) => selectFile(e.target.files?.[0])}
                   />
@@ -367,6 +396,7 @@ export function MovementModal({
                         O elige una foto del ticket
                         <input
                           type="file"
+                          disabled={busy}
                           accept="image/jpeg,image/png,image/webp"
                           capture="environment"
                           onChange={(e) => selectFile(e.target.files?.[0])}
@@ -405,10 +435,12 @@ export function MovementModal({
                   <Field label="Transcripción editable">
                     <textarea
                       value={transcript}
+                      disabled={busy}
                       maxLength={10000}
                       onChange={(e) => {
                         setTranscript(e.target.value);
                         setDrafts([]);
+                        setAnalysisWarning("");
                       }}
                       placeholder="Aquí aparecerá lo que dijiste; también puedes escribirlo."
                     />
@@ -441,23 +473,167 @@ export function MovementModal({
             {drafts.length > 0 && (
               <section className="analysis-result">
                 <h3>Revisa antes de guardar</h3>
+                {receipt && (
+                  <details>
+                    <summary>
+                      Desglose del ticket ·{" "}
+                      {receipt.total === null
+                        ? "Total no legible"
+                        : money(receipt.total)}
+                    </summary>
+                    {receipt.items.map((item: any, i: number) => (
+                      <p key={i}>
+                        {item.quantity} × {item.name} · {money(item.amount)} ·{" "}
+                        {item.category}
+                      </p>
+                    ))}
+                    <p>
+                      Total que confirmarás:{" "}
+                      {money(drafts.reduce((n, m) => n + m.amount, 0))}
+                    </p>
+                  </details>
+                )}
+                <p className="helper">
+                  Gemini sugirió estas categorías. Puedes cambiarlas o descartar
+                  movimientos; solo se guardan cuando confirmas.
+                </p>
                 {drafts.map((m, i) => (
                   <div className="draft-row" key={i}>
-                    <span className="badge">
-                      <CategoryIcon name={m.category} />
-                      {m.category}
-                    </span>
-                    <strong>
-                      {m.type === "ingreso" ? "+" : "−"}
-                      {money(m.amount)}
-                    </strong>
-                    <span>{m.note}</span>
-                    <small>{m.date}</small>
+                    <Field label={`Categoría sugerida del movimiento ${i + 1}`}>
+                      <select
+                        value={m.category}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((draft, index) =>
+                              index === i
+                                ? { ...draft, category: e.target.value }
+                                : draft,
+                            ),
+                          )
+                        }
+                      >
+                        {categories.map((value) => (
+                          <option key={value}>{value}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={`Monto del movimiento ${i + 1}`}>
+                      <input
+                        disabled={busy}
+                        required
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={m.amount}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((v, j) =>
+                              j === i
+                                ? { ...v, amount: Number(e.target.value) }
+                                : v,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field label={`Fecha del movimiento ${i + 1}`}>
+                      <input
+                        disabled={busy}
+                        required
+                        type="date"
+                        max={date}
+                        value={m.date}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((v, j) =>
+                              j === i ? { ...v, date: e.target.value } : v,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field label={`Nota del movimiento ${i + 1}`}>
+                      <input
+                        disabled={busy}
+                        maxLength={400}
+                        value={m.note}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((v, j) =>
+                              j === i ? { ...v, note: e.target.value } : v,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
+                    {m.ruleApplied && (
+                      <small>
+                        Categoría aprendida de una corrección de tu hogar.
+                      </small>
+                    )}
+                    <label className="check-line">
+                      <input
+                        disabled={busy}
+                        type="checkbox"
+                        checked={m.learnCategory ?? true}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((v, j) =>
+                              j === i
+                                ? { ...v, learnCategory: e.target.checked }
+                                : v,
+                            ),
+                          )
+                        }
+                      />
+                      <span>Recordar mi corrección para esta descripción.</span>
+                    </label>
+                    {m.possibleDuplicate && (
+                      <label className="check-line duplicate-warning">
+                        <input
+                          required
+                          disabled={busy}
+                          type="checkbox"
+                          checked={m.allowDuplicate ?? false}
+                          onChange={(e) =>
+                            setDrafts((current) =>
+                              current.map((v, j) =>
+                                j === i
+                                  ? { ...v, allowDuplicate: e.target.checked }
+                                  : v,
+                              ),
+                            )
+                          }
+                        />
+                        <span>
+                          Posible duplicado. Revisé el historial y confirmo que
+                          es otro movimiento.
+                        </span>
+                      </label>
+                    )}
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() =>
+                        setDrafts((current) =>
+                          current.filter((_, index) => index !== i),
+                        )
+                      }
+                    >
+                      Descartar movimiento {i + 1}
+                    </button>
                   </div>
                 ))}
               </section>
             )}
           </>
+        )}
+        {analysisWarning && (
+          <p className="helper" role="status">
+            {analysisWarning}
+          </p>
         )}
         <ErrorText text={error} />
         <Button

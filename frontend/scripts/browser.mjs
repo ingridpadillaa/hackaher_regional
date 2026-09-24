@@ -77,7 +77,7 @@ const checks = await page.locator(".check-line").evaluateAll((labels) =>
     return { x: input.x, textX: text.x, y: input.y, textY: text.y };
   }),
 );
-assert.equal(checks.length, 3);
+assert.equal(checks.length, 2);
 assert.ok(
   checks.every(
     (c) =>
@@ -91,10 +91,16 @@ await page.screenshot({ path: "/tmp/summa-ui/03-profile.png", fullPage: true });
 await page
   .getByRole("button", { name: "Guardar preferencias y empezar" })
   .click();
-await page.getByRole("heading", { name: "Presupuesto del hogar" }).waitFor();
+await page
+  .getByRole("heading", { name: "Tu dinero, más claro" })
+  .waitFor()
+  .catch(async (e) => {
+    console.log(await page.locator("body").innerText());
+    throw e;
+  });
 assert.equal(await page.getByRole("navigation").getByRole("link").count(), 4);
 await page.screenshot({ path: "/tmp/summa-ui/04-home.png", fullPage: true });
-await page.getByRole("button", { name: /Registra movimiento/ }).click();
+await page.getByRole("button", { name: /Registrar movimiento/ }).click();
 await page.getByRole("dialog").waitFor();
 await page.getByLabel("Monto", { exact: true }).fill("250");
 await page.getByLabel("Nota (opcional)").fill("Compra de prueba");
@@ -105,12 +111,12 @@ await page.screenshot({
 await page.getByRole("button", { name: "Guardar movimiento" }).click();
 await page.getByText("Compra de prueba", { exact: true }).waitFor();
 await page.reload();
-await page.getByRole("heading", { name: "Presupuesto del hogar" }).waitFor();
+await page.getByRole("heading", { name: "Tu dinero, más claro" }).waitFor();
 await page.getByRole("link", { name: "Carrito", exact: true }).click();
 const nearby = page.getByRole("region", { name: "Supermercados cercanos" });
 assert.match(
   await nearby
-    .getByRole("link", { name: "Buscar en Monterrey" })
+    .getByRole("link", { name: /Ver zona en Google Maps/ })
     .getAttribute("href"),
   /api=1/,
 );
@@ -118,8 +124,7 @@ await page.evaluate(() => {
   window.originalGetPosition = navigator.geolocation.getCurrentPosition.bind(
     navigator.geolocation,
   );
-  navigator.geolocation.getCurrentPosition = (_success, failure) =>
-    failure({ code: 1 });
+  navigator.geolocation.getCurrentPosition = (_s, f) => f({ code: 1 });
 });
 await nearby.getByRole("button", { name: "Usar mi ubicación" }).click();
 await nearby
@@ -131,18 +136,16 @@ await page.evaluate(() => {
 await context.grantPermissions(["geolocation"]);
 await context.setGeolocation({ latitude: 25.6866, longitude: -100.3161 });
 await nearby.getByRole("button", { name: "Usar mi ubicación" }).click();
-const maps = nearby.getByRole("link", {
-  name: "Ver supermercados cerca de mí",
-});
-await maps.waitFor();
+await nearby.getByRole("button", { name: "Actualizar mi ubicación" }).waitFor();
 assert.match(
-  decodeURIComponent(await maps.getAttribute("href")),
+  decodeURIComponent(
+    await nearby
+      .getByRole("link", { name: /Ver zona en Google Maps/ })
+      .getAttribute("href"),
+  ),
   /25.6866,-100.3161/,
 );
-await nearby
-  .getByRole("button", { name: "Dejar de usar mi ubicación" })
-  .click();
-await nearby.getByRole("link", { name: "Buscar en Monterrey" }).waitFor();
+await nearby.getByRole("button", { name: "Usar solo municipio" }).click();
 
 await page.getByRole("button", { name: "Agregar producto a mi lista" }).click();
 await page
@@ -153,7 +156,9 @@ await page
   .getByRole("button", { name: "Agregar producto", exact: true })
   .click();
 await page.getByRole("button", { name: "Guardar y comparar" }).click();
-await page.getByRole("button", { name: "Ir a Aurrera" }).waitFor();
+await page
+  .getByRole("button", { name: "Guardar y comparar" })
+  .waitFor({ state: "hidden" });
 await page.screenshot({ path: "/tmp/summa-ui/06-cart.png", fullPage: true });
 await page.getByRole("link", { name: "Simulador", exact: true }).click();
 await page.getByRole("button", { name: "Crear meta", exact: true }).click();
@@ -170,6 +175,79 @@ await page.screenshot({
   path: "/tmp/summa-ui/07-simulator.png",
   fullPage: true,
 });
+// New finance flows: declared savings, extra income, report periods and agenda.
+await page
+  .getByRole("button", { name: "Registrar aportación", exact: true })
+  .click();
+await page
+  .getByRole("dialog")
+  .getByLabel("Monto (MXN)", { exact: true })
+  .fill("300");
+await page
+  .getByRole("button", { name: "Confirmar registro", exact: true })
+  .click();
+await page.getByRole("dialog").waitFor({ state: "hidden" });
+assert.match(await page.locator(".streak-count").innerText(), /1/);
+await page
+  .getByRole("button", { name: "Registrar retiro", exact: true })
+  .click();
+await page
+  .getByRole("dialog")
+  .getByLabel("Monto (MXN)", { exact: true })
+  .fill("50");
+await page
+  .getByRole("button", { name: "Confirmar registro", exact: true })
+  .click();
+await page.getByRole("dialog").waitFor({ state: "hidden" });
+assert.match(await page.locator(".goal-card").innerText(), /250.00/);
+await page.getByRole("link", { name: "Inicio", exact: true }).click();
+await page
+  .getByRole("button", { name: "Registrar movimiento", exact: true })
+  .click();
+await page.getByRole("button", { name: "Ingreso", exact: true }).click();
+await page.getByLabel("Tipo de ingreso").selectOption("extra");
+await page.getByLabel("Monto", { exact: true }).fill("500");
+await page.getByLabel("Nota (opcional)").fill("Ingreso extra de prueba");
+await page
+  .getByRole("button", { name: "Guardar movimiento", exact: true })
+  .click();
+await page.getByText("Ingreso extra de prueba", { exact: true }).waitFor();
+assert.match(
+  await page.locator(".report-bars").innerText(),
+  /Adicionales: \$500.00/,
+);
+const currentMonth = await page.getByLabel("Mes del reporte").inputValue();
+await page.getByLabel("Mes del reporte").fill("2020-01");
+await page
+  .getByText("No hay gastos registrados en este mes.", { exact: true })
+  .waitFor();
+assert.match(
+  await page.locator(".report-bars").innerText(),
+  /Adicionales: \$0.00/,
+);
+await page.getByLabel("Mes del reporte").fill(currentMonth);
+await page.getByText("Ingreso extra de prueba", { exact: true }).waitFor();
+await page.getByRole("button", { name: "Agregar evento", exact: true }).click();
+await page
+  .getByRole("dialog")
+  .getByLabel("Nombre", { exact: true })
+  .fill("Pago de prueba");
+await page
+  .getByRole("dialog")
+  .getByLabel("Monto (MXN)", { exact: true })
+  .fill("100");
+await page.getByRole("button", { name: "Guardar evento", exact: true }).click();
+await page.getByRole("dialog").waitFor({ state: "hidden" });
+await page.getByRole("button", { name: "Registrar pago", exact: true }).click();
+await page
+  .getByRole("button", { name: "Confirmar y registrar", exact: true })
+  .click();
+await page.getByRole("dialog").waitFor({ state: "hidden" });
+await page.getByText("Pago de prueba", { exact: true }).waitFor();
+await page.screenshot({ path: "/tmp/summa-ui/11-finance.png", fullPage: true });
+console.log(
+  "PASS: savings contributions/withdrawals, weekly streak, extra income graph, monthly report switching and scheduled payment.",
+);
 await page.getByRole("button", { name: /Notificaciones/ }).click();
 await page.getByRole("dialog").waitFor();
 await page.screenshot({
@@ -264,6 +342,19 @@ assert.equal(
 );
 await page.screenshot({ path: "/tmp/summa-ui/10-profile.png", fullPage: true });
 
+const oldInvitation = await page.getByLabel("Enlace de invitación").inputValue();
+const downloadPromise = page.waitForEvent("download");
+await page.getByRole("button", { name: "Descargar QR", exact: true }).click();
+const qrDownload = await downloadPromise;
+assert.match(qrDownload.suggestedFilename(), /\.svg$/);
+await page.getByRole("button", { name: "Generar nueva invitación" }).click();
+await page.getByText("Nueva invitación creada. La anterior dejó de funcionar.").waitFor();
+assert.notEqual(await page.getByLabel("Enlace de invitación").inputValue(), oldInvitation);
+await page.getByRole("button", { name: "Revocar invitación" }).click();
+await page.getByText("Invitación revocada.", { exact: true }).waitFor();
+assert.equal(await page.getByRole("button", { name: "Descargar QR", exact: true }).count(), 0);
+console.log("PASS: QR download, invitation rotation and revocation in browser.");
+
 await page.getByRole("button", { name: "Cerrar sesión" }).click();
 await page
   .getByRole("button", { name: "Iniciar sesión", exact: true })
@@ -277,7 +368,7 @@ await page
   .getByRole("button", { name: "Iniciar sesión", exact: true })
   .last()
   .click();
-await page.getByRole("heading", { name: "Presupuesto del hogar" }).waitFor();
+await page.getByRole("heading", { name: "Tu dinero, más claro" }).waitFor();
 await page.getByText("Compra de prueba", { exact: true }).waitFor();
 assert.deepEqual(errors, []);
 assert.ok(

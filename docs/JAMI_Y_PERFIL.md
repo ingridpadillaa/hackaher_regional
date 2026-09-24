@@ -1,5 +1,7 @@
 # Perfil, Jami y demostración
 
+> Referencia histórica. Para el modelo vigente consulta MODELO_DATOS.md; ubicación e invitaciones en IA_UBICACION_CATALOGO.md. La demo actualizada de fase 7 es [Hacka](FASE_7_DEMO_HACKA.md), aislada en emuladores; la demo Hack descrita abajo se conserva.
+
 ## Perfil
 
 Selecciona una persona dentro de **Tu hogar** para editar nombre, edad, estudios, ocupación, ingreso y periodicidad. Elimina perfiles desde ese mismo editor, con confirmación. Solo administra el hogar su propietario; el perfil administrador se conserva. Al eliminar un perfil con cuenta vinculada se retira su acceso al hogar, sin borrar la cuenta de Authentication ni los movimientos históricos.
@@ -37,3 +39,23 @@ node backend/scripts/mirror-hack-demo.mjs
 La copia lee únicamente documentos de la demo en la nube y escribe únicamente a los hosts locales de Auth y Firestore. Si la demo ya existe localmente, no la sobrescribe.
 
 Para inspeccionar el plan de carga en la nube, `node backend/scripts/seed-hack-demo.mjs` no escribe. La opción `--apply --confirm-demo` realiza la carga exclusivamente en el hogar marcado de ensayo; si ya existe, no lo sobrescribe. No genera precios de supermercado ni evidencia bancaria ficticia presentada como real.
+
+## Integración Gemini comprobada
+
+La clave local existente y el modelo configurado `gemini-3.8-flash` se verificaron contra el proveedor. El cliente común `backend/functions/src/gemini.ts` sirve a extracción y chat. Los esquemas de salida se validan de nuevo con Zod; archivos incompatibles, importes inválidos, fechas futuras y respuestas incompletas se rechazan. La clave sigue únicamente en el secreto del backend.
+
+- Ticket/foto y PDF: lectura y clasificación automáticas.
+- Audio o transcripción escrita: extracción de movimientos y categorías.
+- Confirmación: el análisis crea un borrador, no un movimiento. La persona puede corregir la categoría o descartar una fila antes de guardar. Se conserva la categoría sugerida junto con la categoría confirmada.
+- Jami: orientación generativa con datos agregados, contexto de estilo de vida/prioridades y las últimas cuatro preguntas de la sesión. Las cifras se calculan en el servidor y se mantienen separadas de los consejos del modelo.
+
+Se probaron llamadas reales con comprobantes y audio sintéticos, sin documentos personales. No se desplegaron Functions ni Hosting. El secreto local no actualiza por sí solo Secret Manager ni la aplicación en producción.
+
+Pruebas habituales: `npm test`, `npm run test:integration`, `npm run build`. Las pruebas reales siguientes consumen cuota de Gemini y se ejecutan solo de forma explícita desde la raíz:
+
+```sh
+node backend/scripts/gemini-live-smoke.mjs /ruta/a/audio-sintetico.wav
+node frontend/scripts/gemini-browser-smoke.mjs
+```
+
+La primera genera comprobantes sintéticos en `/tmp` y verifica texto, imagen, PDF, audio WAV opcional y chat. La segunda necesita los emuladores y Vite encendidos y el comprobante creado por la primera; crea un hogar exclusivamente local, verifica que el análisis no guarde automáticamente y confirma una categoría corregida.

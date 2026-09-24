@@ -8,6 +8,8 @@ import {
   Plus,
   LogOut,
 } from "lucide-react";
+import { LocationPicker, type Area } from "./LocationPicker";
+import { Link } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth, call, errorMessage } from "./firebase";
 import {
@@ -49,6 +51,13 @@ export function Profile({
       ? false
       : (home.preferences?.privacyAccepted ?? false),
   });
+  const [area, setArea] = useState<Area>(
+    home.location ?? {
+      municipality: home.preferences?.municipality ?? "",
+      state: "",
+      source: "manual",
+    },
+  );
   const [members, setMembers] = useState<Member[]>(home.members);
   useEffect(() => {
     setMembers(home.members);
@@ -67,7 +76,6 @@ export function Profile({
         0,
       ) * 100,
     ) / 100;
-  const [section, setSection] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -86,7 +94,13 @@ export function Profile({
       await call(
         owner ? "savePreferences" : "completeMemberProfile",
         owner
-          ? { ...prefs, members, monthlyBudget: monthlyIncome }
+          ? {
+              ...prefs,
+              members,
+              assistantTone: "cercano",
+              municipality: area.municipality,
+              location: area,
+            }
           : { privacyAccepted: prefs.privacyAccepted },
       );
       await onSaved();
@@ -119,25 +133,6 @@ export function Profile({
       setBusy(false);
     }
   }
-  const panels = [
-    {
-      title: "Estilo de vida",
-      subtitle:
-        "Hábitos para que Jami adapte sus consejos; no cambia tu presupuesto.",
-      icon: Heart,
-    },
-    {
-      title: "Metas prioritarias",
-      subtitle:
-        "Temas que Jami debe priorizar; las metas con monto se crean en Simulador.",
-      icon: Target,
-    },
-    {
-      title: "Tu asistente Jami",
-      subtitle: "Personaliza a Jami y elige cómo quieres que te acompañe.",
-      icon: Heart,
-    },
-  ];
   return (
     <main className="page profile-page">
       <Logo />
@@ -149,9 +144,8 @@ export function Profile({
           <em>tu experiencia</em>
         </h1>
         <p>
-          Cuéntanos sobre tu hogar y estilo de vida
-          <br />
-          para darte una experiencia hecha a tu medida.
+          Administra los integrantes de tu hogar
+          <br />y sus preferencias de notificaciones.
         </p>
       </header>
       <form onSubmit={save}>
@@ -189,28 +183,18 @@ export function Profile({
             )}
           </div>
         </section>
-        {panels.map(({ title, subtitle, icon: Icon }) => (
-          <button
-            type="button"
-            disabled={!owner}
-            key={title}
-            className="card profile-row"
-            onClick={() => setSection(title)}
-          >
-            <span className="tile">
-              {title === "Tu asistente Jami" ? (
-                <img src="/images/jami-avatar.png" alt="" />
-              ) : (
-                <Icon />
-              )}
-            </span>
-            <span>
-              <strong>{title}</strong>
-              <small>{subtitle}</small>
-            </span>
-            <ChevronRight size={18} />
-          </button>
-        ))}
+        <Link className="card profile-row" to="/simulador">
+          <span className="tile">
+            <Target />
+          </span>
+          <span>
+            <strong>Metas de ahorro</strong>
+            <small>
+              Define objetivos y registra tus aportaciones en Simulador.
+            </small>
+          </span>
+          <ChevronRight size={18} />
+        </Link>
         <section className="card">
           <div className="section-heading">
             <span className="tile">
@@ -262,11 +246,12 @@ export function Profile({
               className="card profile-income"
               aria-label="Ingreso registrado"
             >
-              <h2>Ingreso mensual del hogar</h2>
+              <h2>Ingresos previstos del hogar</h2>
               <strong>{money(monthlyIncome)}</strong>
               <p>
-                Calculado con los ingresos que registraste en los perfiles.
-                Puedes corregirlos seleccionando a la persona en Tu hogar.
+                Estimación a partir de los perfiles; no cuenta como dinero
+                recibido. Puedes corregirlos seleccionando a la persona en Tu
+                hogar.
               </p>
               <small>
                 Quincenal: 2 pagos al mes. Semanal: promedio de 52 semanas entre
@@ -275,18 +260,11 @@ export function Profile({
             </section>
             <section className="card profile-settings">
               <h2>Ubicación del hogar</h2>
-              <div>
-                <Field label="Municipio">
-                  <input
-                    required={owner}
-                    disabled={!owner}
-                    maxLength={120}
-                    value={prefs.municipality}
-                    placeholder="Municipio del hogar"
-                    onChange={(e) => change("municipality", e.target.value)}
-                  />
-                </Field>
-              </div>
+              <LocationPicker
+                value={area}
+                onChange={setArea}
+                disabled={!owner}
+              />
             </section>
             <section className="card profile-settings">
               <h2>Privacidad y permisos</h2>
@@ -317,15 +295,11 @@ export function Profile({
                   documentos no se almacenan.
                 </span>
               </label>
-              <label className="check-line">
-                <input
-                  type="checkbox"
-                  checked={prefs.bankConsent}
-                  disabled={!owner}
-                  onChange={(e) => change("bankConsent", e.target.checked)}
-                />
-                <span>Quiero conectar mi banco para verificar mi ahorro.</span>
-              </label>
+              <p className="helper">
+                La conexión bancaria se autoriza de forma individual en
+                Simulador → Conectar mi banco. No acredita ahorro
+                automáticamente.
+              </p>
             </section>
           </>
         )}
@@ -348,7 +322,38 @@ export function Profile({
           </Next>
         </Button>
       </form>
-      <ShareHome code={home.invitationCode} />
+      {!initial && (
+        <section className="card">
+          <h2>Zona del hogar</h2>
+          <LocationPicker value={area} onChange={setArea} disabled={!owner} />
+          {owner && (
+            <Button
+              busy={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                try {
+                  await call("saveLocation", area);
+                  await onSaved();
+                  setSaved(true);
+                } catch (e) {
+                  setError(errorMessage(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Guardar zona
+            </Button>
+          )}
+        </section>
+      )}
+      <ShareHome
+        code={home.invitationCode}
+        expiresAt={home.invitationExpiresAt}
+        owner={owner}
+        onSaved={onSaved}
+      />
       {!initial && (
         <button className="text-button logout" onClick={() => signOut(auth)}>
           <LogOut size={18} />
@@ -396,57 +401,6 @@ export function Profile({
           >
             Cancelar
           </Button>
-        </Modal>
-      )}
-      {section && (
-        <Modal title={section} onClose={() => setSection("")}>
-          {section === "Estilo de vida" ? (
-            <Field label="Así es nuestro día a día">
-              <textarea
-                maxLength={400}
-                value={prefs.lifestyle}
-                onChange={(e) => change("lifestyle", e.target.value)}
-                placeholder="Hábitos, transporte y actividades del hogar"
-              />
-            </Field>
-          ) : section === "Metas prioritarias" ? (
-            <div className="chips">
-              {[
-                "Fondo de emergencia",
-                "Viaje",
-                "Educación",
-                "Casa",
-                "Pagar deudas",
-              ].map((x) => (
-                <button
-                  key={x}
-                  className={prefs.priorities.includes(x) ? "selected" : ""}
-                  onClick={() =>
-                    change(
-                      "priorities",
-                      prefs.priorities.includes(x)
-                        ? prefs.priorities.filter((v) => v !== x)
-                        : [...prefs.priorities, x],
-                    )
-                  }
-                >
-                  {x}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <Field label="¿Cómo quieres que te acompañe Jami?">
-              <select
-                value={prefs.assistantTone}
-                onChange={(e) => change("assistantTone", e.target.value)}
-              >
-                <option value="cercano">Cercano y cálido</option>
-                <option value="directo">Breve y directo</option>
-                <option value="motivador">Con ánimo y motivación</option>
-              </select>
-            </Field>
-          )}
-          <Button onClick={() => setSection("")}>Listo</Button>
         </Modal>
       )}
     </main>

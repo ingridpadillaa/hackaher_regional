@@ -20,7 +20,8 @@ test("monthly totals distinguish additional income from expenses without floatin
   );
   assert.equal(r.expenses, 0.3);
   assert.equal(r.extraIncome, 500);
-  assert.equal(r.remaining, 1499.7);
+  assert.equal(r.remaining, 499.7);
+  assert.equal(r.budgetRemaining, 999.7);
 });
 test("streak requires consecutive verified banking evidence, including yesterday before today is synced", () => {
   const evidence = [

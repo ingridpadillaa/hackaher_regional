@@ -8,7 +8,7 @@ import {
   TrendingUp,
   Landmark,
 } from "lucide-react";
-import { type State, type Goal, money } from "./types";
+import { type State, type Goal, money, dateLabel } from "./types";
 import { Logo, Jami, Button, Field, Modal, ErrorText, Empty } from "./ui";
 import { call, errorMessage } from "./firebase";
 export function Simulator({
@@ -19,6 +19,24 @@ export function Simulator({
   onSaved: () => Promise<void>;
 }) {
   const [editing, setEditing] = useState<Goal | null | undefined>();
+  const [targetDate, setTargetDate] = useState("");
+  const [entryGoal, setEntryGoal] = useState<Goal | null>(null);
+  const [entryType, setEntryType] = useState<"contribution" | "withdrawal">(
+    "contribution",
+  );
+  const [entryAmount, setEntryAmount] = useState("");
+  const [entryDate, setEntryDate] = useState(state.date);
+  const [entryNote, setEntryNote] = useState("");
+  const [entryId, setEntryId] = useState("");
+  function openEntry(g: Goal, type: "contribution" | "withdrawal") {
+    setEntryGoal(g);
+    setEntryType(type);
+    setEntryAmount("");
+    setEntryDate(state.date);
+    setEntryNote("");
+    setEntryId(crypto.randomUUID());
+    setError("");
+  }
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
   const [amount, setAmount] = useState("");
@@ -34,6 +52,7 @@ export function Simulator({
   function edit(g: Goal | null) {
     setEditing(g);
     setName(g?.name ?? "");
+    setTargetDate(g?.targetDate ?? "");
     setTarget(g ? String(g.target) : "");
     setError("");
   }
@@ -45,6 +64,7 @@ export function Simulator({
       await call("saveGoal", {
         ...(editing ? { id: editing.id } : {}),
         name,
+        targetDate,
         target: Number(target),
       });
       await onSaved();
@@ -75,21 +95,28 @@ export function Simulator({
         <div className="streak">
           <div className="flames">
             {Array.from({ length: 5 }, (_, i) => (
-              <span className={i < state.bank.streak ? "lit" : ""} key={i}>
+              <span
+                className={i < (state.savings?.streak ?? 0) ? "lit" : ""}
+                key={i}
+              >
                 <Flame />
               </span>
             ))}
           </div>
           <div className="streak-count">
-            <strong>{state.bank.streak}</strong>
-            <small>días seguidos</small>
+            <strong>{state.savings?.streak ?? 0}</strong>
+            <small>semanas seguidas</small>
           </div>
         </div>
-        {!state.bank.connected && (
-          <p className="helper">
-            Conecta tu banco para verificar tu ahorro diario y empezar tu racha.
-          </p>
-        )}
+        <p className="helper">
+          Semanas con aportaciones netas positivas registradas por ti. La semana
+          actual puede completarse hasta el domingo. No es verificación
+          bancaria.
+        </p>
+        <p>
+          Esta semana: <strong>{money(state.savings?.weeklyNet ?? 0)}</strong>{" "}
+          en aportaciones menos retiros.
+        </p>
         <Button onClick={() => edit(null)}>
           <Plus />
           Crear meta
@@ -134,6 +161,44 @@ export function Simulator({
                   <b>{percent}%</b>
                 </div>
                 <small>Faltan {money(Math.max(0, g.target - g.saved))}</small>
+                {g.targetDate && (
+                  <small>Fecha objetivo: {dateLabel(g.targetDate)}</small>
+                )}
+                <p className="helper">
+                  Ahorro registrado · no verificado por banco
+                </p>
+                <div className="saving-actions">
+                  <Button
+                    className="secondary"
+                    onClick={() => openEntry(g, "contribution")}
+                  >
+                    Registrar aportación
+                  </Button>
+                  <Button
+                    className="secondary"
+                    disabled={g.saved <= 0}
+                    onClick={() => openEntry(g, "withdrawal")}
+                  >
+                    Registrar retiro
+                  </Button>
+                </div>
+                <details>
+                  <summary>Ver aportaciones y retiros</summary>
+                  {(state.savingsEntries ?? [])
+                    .filter((e) => e.goalId === g.id)
+                    .map((e) => (
+                      <p key={e.id}>
+                        {dateLabel(e.date)} ·{" "}
+                        {e.type === "opening"
+                          ? "Saldo previo"
+                          : e.type === "withdrawal"
+                            ? "Retiro"
+                            : "Aportación"}
+                        : {money(e.amount)}
+                        {e.note ? ` · ${e.note}` : ""}
+                      </p>
+                    ))}
+                </details>
               </div>
             </article>
           );
@@ -212,7 +277,7 @@ export function Simulator({
         </div>
       </section>
       <p className="helper">
-        La simulación no mueve dinero ni modifica tu ahorro verificado.
+        La simulación no mueve dinero ni modifica tus aportaciones registradas.
       </p>
       <div className="encouragement">
         <Jami kind="avatar" />
@@ -235,7 +300,7 @@ export function Simulator({
         <div className="section-heading">
           <Landmark className="pink" />
           <div>
-            <h3>Ahorro verificado</h3>
+            <h3>Mi conexión bancaria</h3>
             {state.bank.sandbox && (
               <span className="badge">Sandbox · Datos de prueba</span>
             )}
@@ -253,6 +318,77 @@ export function Simulator({
       </section>
       {bankOpen && (
         <BankConnect onClose={() => setBankOpen(false)} onSaved={onSaved} />
+      )}
+      {entryGoal && (
+        <Modal
+          title={
+            entryType === "contribution"
+              ? "Registrar aportación"
+              : "Registrar retiro"
+          }
+          onClose={() => !busy && setEntryGoal(null)}
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setBusy(true);
+              setError("");
+              try {
+                await call("saveSavingsEntry", {
+                  requestId: entryId,
+                  goalId: entryGoal.id,
+                  type: entryType,
+                  amount: Number(entryAmount),
+                  date: entryDate,
+                  note: entryNote,
+                });
+                await onSaved();
+                setEntryGoal(null);
+              } catch (e) {
+                setError(errorMessage(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <p>
+              {entryGoal.name} · {money(entryGoal.saved)} registrados.
+            </p>
+            <Field label="Monto (MXN)">
+              <input
+                required
+                type="number"
+                min="0.01"
+                max={entryType === "withdrawal" ? entryGoal.saved : 10000000}
+                step="0.01"
+                value={entryAmount}
+                onChange={(e) => setEntryAmount(e.target.value)}
+              />
+            </Field>
+            <Field label="Fecha">
+              <input
+                required
+                type="date"
+                max={state.date}
+                value={entryDate}
+                onChange={(e) => setEntryDate(e.target.value)}
+              />
+            </Field>
+            <Field label="Nota (opcional)">
+              <input
+                maxLength={400}
+                value={entryNote}
+                onChange={(e) => setEntryNote(e.target.value)}
+              />
+            </Field>
+            <p className="helper">
+              Registra dinero que ya apartaste o retiraste. Esto no mueve dinero
+              ni genera ingresos o gastos adicionales.
+            </p>
+            <ErrorText text={error} />
+            <Button busy={busy}>Confirmar registro</Button>
+          </form>
+        </Modal>
       )}
       {editing !== undefined && (
         <Modal
@@ -278,6 +414,13 @@ export function Simulator({
                 step="0.01"
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
+              />
+            </Field>
+            <Field label="Fecha objetivo (opcional)">
+              <input
+                type="date"
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
               />
             </Field>
             <ErrorText text={error} />

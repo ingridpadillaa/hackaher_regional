@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Plus,
   House,
@@ -154,16 +154,30 @@ export function Household({ onSaved }: { onSaved: () => Promise<void> }) {
   const [editing, setEditing] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [joining, setJoining] = useState(false);
+  const [joining, setJoining] = useState(
+    !!sessionStorage.getItem("summa-invite"),
+  );
+  const [preview, setPreview] = useState<{
+    name: string;
+    expiresAt: string;
+  } | null>(null);
   const [code, setCode] = useState(
-    new URLSearchParams(location.search).get("invite") ?? "",
+    sessionStorage.getItem("summa-invite") ?? "",
   );
   async function save() {
     setError("");
     setBusy(true);
     try {
-      if (joining) await call("joinHome", { code: code.toUpperCase() });
-      else await call("createHome", { name, members });
+      if (joining) {
+        if (!preview) {
+          setPreview(
+            await call("previewInvitation", { code: code.toUpperCase() }),
+          );
+          return;
+        }
+        await call("joinHome", { code: code.toUpperCase() });
+        sessionStorage.removeItem("summa-invite");
+      } else await call("createHome", { name, members });
       await onSaved();
     } catch (e) {
       setError(errorMessage(e));
@@ -208,8 +222,11 @@ export function Household({ onSaved }: { onSaved: () => Promise<void> }) {
           <Field label="Código de invitación">
             <input
               value={code}
-              maxLength={16}
-              onChange={(e) => setCode(e.target.value)}
+              maxLength={32}
+              onChange={(e) => {
+                setCode(e.target.value);
+                setPreview(null);
+              }}
               placeholder="Código del hogar"
             />
           </Field>
@@ -276,13 +293,25 @@ export function Household({ onSaved }: { onSaved: () => Promise<void> }) {
             </Button>
           </>
         )}
+        {joining && preview && (
+          <p className="invite-preview">
+            Te unirás a <strong>{preview.name}</strong> como integrante. No
+            obtendrás permisos de administrador. Confirma para continuar.
+          </p>
+        )}
         <ErrorText text={error} />
         <Button
           busy={busy}
           disabled={!joining && (!name.trim() || !members.length)}
           onClick={save}
         >
-          <Next>{joining ? "Unirme al hogar" : "Crear hogar y continuar"}</Next>
+          <Next>
+            {joining
+              ? preview
+                ? "Confirmar y unirme"
+                : "Revisar invitación"
+              : "Crear hogar y continuar"}
+          </Next>
         </Button>
       </section>
       <p className="helper">
@@ -308,31 +337,140 @@ export function Household({ onSaved }: { onSaved: () => Promise<void> }) {
     </main>
   );
 }
-export function ShareHome({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
+export function ShareHome({
+  code,
+  expiresAt,
+  owner,
+  onSaved,
+}: {
+  code: string;
+  expiresAt?: string | null;
+  owner: boolean;
+  onSaved: () => Promise<void>;
+}) {
+  const [message, setMessage] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  const qr = useRef<HTMLDivElement>(null);
+  const url = `${location.origin}/?invite=${code}`;
+  const active = !!expiresAt && Date.parse(expiresAt) > Date.now();
+  async function manage(action: string) {
+    setBusy(true);
+    setError("");
+    try {
+      await call(action);
+      await onSaved();
+      setMessage(
+        action === "rotateInvitation"
+          ? "Nueva invitación creada. La anterior dejó de funcionar."
+          : "Invitación revocada.",
+      );
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setMessage("Enlace copiado.");
+    } catch {
+      setError("No se pudo copiar; selecciona el enlace que aparece abajo.");
+    }
+  }
   return (
-    <section className="card share-card">
-      <Share2 className="pink" />
-      <div>
-        <strong>Compartir hogar</strong>
-        <small>Invita a otros miembros con un código o código QR.</small>
-      </div>
-      <QRCodeSVG value={`${location.origin}/?invite=${code}`} size={64} />
-      <button
-        className="code"
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(code);
-            setCopied(true);
-          } catch {
-            setCopied(false);
-          }
-        }}
-      >
-        <small>{copied ? "¡Copiado!" : "Código de invitación"}</small>
-        {code}
-        <Copy size={14} />
-      </button>
+    <section className="card invitation-card">
+      <h2>Invitar a mi hogar</h2>
+      <p>Comparte el enlace o QR con la persona que quieres invitar.</p>
+      {active ? (
+        <>
+          <div ref={qr} className="invitation-qr">
+            <QRCodeSVG value={url} size={160} marginSize={4} />
+          </div>
+          <small>Vence: {new Date(expiresAt!).toLocaleString("es-MX")}</small>
+          <input
+            aria-label="Enlace de invitación"
+            readOnly
+            value={url}
+            onFocus={(e) => e.target.select()}
+          />
+          <div className="saving-actions">
+            <Button
+              className="secondary"
+              onClick={async () => {
+                if (navigator.share) {
+                  try {
+                    await navigator.share({
+                      title: "Únete a mi hogar en Summa",
+                      text: "Te invito a compartir mi hogar en Summa.",
+                      url,
+                    });
+                  } catch (e) {
+                    if ((e as Error).name !== "AbortError")
+                      setError(
+                        "No se pudo compartir. Puedes copiar el enlace.",
+                      );
+                  }
+                } else await copy();
+              }}
+            >
+              Compartir invitación
+            </Button>
+            <Button className="secondary" onClick={copy}>
+              Copiar enlace
+            </Button>
+            <Button
+              className="secondary"
+              onClick={() => {
+                const svg = qr.current?.querySelector("svg");
+                if (!svg) return;
+                const blob = new Blob(
+                  [new XMLSerializer().serializeToString(svg)],
+                  { type: "image/svg+xml" },
+                );
+                const objectUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = objectUrl;
+                a.download = "invitacion-summa.svg";
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+              }}
+            >
+              Descargar QR
+            </Button>
+          </div>
+        </>
+      ) : (
+        <p>
+          La invitación está vencida o revocada.{" "}
+          {owner
+            ? "Genera una nueva para invitar."
+            : "Pide una nueva a quien administra el hogar."}
+        </p>
+      )}
+      {owner && (
+        <div className="saving-actions">
+          <Button
+            className="secondary"
+            busy={busy}
+            onClick={() => manage("rotateInvitation")}
+          >
+            Generar nueva invitación
+          </Button>
+          {active && (
+            <Button
+              className="secondary"
+              disabled={busy}
+              onClick={() => manage("revokeInvitation")}
+            >
+              Revocar invitación
+            </Button>
+          )}
+        </div>
+      )}
+      <p role="status">{message}</p>
+      <ErrorText text={error} />
     </section>
   );
 }

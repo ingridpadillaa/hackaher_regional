@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { NearbyStores } from "./NearbyStores";
+import { LocationPicker, type Area } from "./LocationPicker";
+import { RetailerCart } from "./RetailerCart";
 import {
   Search,
   ShoppingCart,
@@ -20,6 +21,15 @@ export function Cart({
   state: State;
   onSaved: () => Promise<void>;
 }) {
+  const [area, setArea] = useState<Area>(
+    state.home?.location ?? {
+      municipality: state.home?.preferences?.municipality ?? "",
+      state: "",
+      source: "manual",
+    },
+  );
+  const [historical, setHistorical] = useState(false);
+  const [sort, setSort] = useState("price");
   const [items, setItems] = useState<CartItem[]>(state.cart);
   const [term, setTerm] = useState("");
   const [products, setProducts] = useState<any[]>([]);
@@ -31,12 +41,19 @@ export function Cart({
   const [unit, setUnit] = useState("pieza");
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const revision = useRef(0);
+  const comparisonVersion = useRef(0);
+  function invalidate() {
+    comparisonVersion.current++;
+    setOffers([]);
+    setDirty(true);
+  }
   const [dirty, setDirty] = useState(false);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     const current = ++revision.current;
     if (term.trim().length < 2) {
       setProducts([]);
+      setSearching(false);
       return;
     }
     const t = setTimeout(async () => {
@@ -54,8 +71,11 @@ export function Cart({
   }, [term]);
   useEffect(() => {
     let live = true;
-    call("compareCart", { items: state.cart })
-      .then((r) => live && setOffers(r))
+    const version = ++comparisonVersion.current;
+    call("compareCart", { items: state.cart, area, historical, sort })
+      .then(
+        (r) => live && version === comparisonVersion.current && setOffers(r),
+      )
       .catch((e) => live && setError(errorMessage(e)));
     return () => {
       live = false;
@@ -63,8 +83,7 @@ export function Cart({
   }, []);
   function update(next: CartItem[]) {
     setItems(next);
-    setDirty(true);
-    setOffers([]);
+    invalidate();
   }
   function add(p: any) {
     if (items.some((i) => i.id === p.id)) {
@@ -89,13 +108,16 @@ export function Cart({
     setShowAdd(false);
   }
   async function save() {
+    const version = ++comparisonVersion.current;
     setBusy(true);
     setError("");
     try {
       await call("saveCart", { items });
-      const o = await call("compareCart", { items });
-      setOffers(o);
-      setDirty(false);
+      const o = await call("compareCart", { items, area, historical, sort });
+      if (version === comparisonVersion.current) {
+        setOffers(o);
+        setDirty(false);
+      }
       await onSaved();
     } catch (e) {
       setError(errorMessage(e));
@@ -269,14 +291,52 @@ export function Cart({
           </Button>
         )}
       </section>
-      <NearbyStores
-        municipality={state.home?.preferences?.municipality ?? ""}
-      />
+      <section className="card" aria-label="Supermercados cercanos">
+        <h2>Zona para esta compra</h2>
+        <LocationPicker
+          temporary
+          value={area}
+          onChange={(a) => {
+            setArea(a);
+            invalidate();
+          }}
+        />
+        <Field label="Ordenar sucursales">
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value);
+              invalidate();
+            }}
+          >
+            <option value="price">Precio de la misma lista</option>
+            <option value="distance">Cercanía (requiere ubicación)</option>
+          </select>
+        </Field>
+        <label className="check-line">
+          <input
+            type="checkbox"
+            checked={historical}
+            onChange={(e) => {
+              setHistorical(e.target.checked);
+              invalidate();
+            }}
+          />
+          <span>
+            Incluir referencias históricas de más de 30 días. No son precios
+            actuales.
+          </span>
+        </label>
+        <p className="helper">
+          Sucursales del catálogo PROFECO. La distancia es aproximada en línea
+          recta, no una ruta. Las valoraciones de Google no están conectadas.
+        </p>
+      </section>
       <div className="section-heading comparison-title">
         <BarChart3 className="pink" />
         <div>
-          <h2>Mejores 3 opciones para ti</h2>
-          <p>Mismo carrito, diferentes precios</p>
+          <h2>Compara hasta 4 sucursales</h2>
+          <p>Mismos productos y presentaciones, con fuente y fecha</p>
         </div>
       </div>
       <ErrorText text={error} />
@@ -284,14 +344,14 @@ export function Cart({
         <Empty>
           {dirty
             ? "Guarda tu lista para actualizar las opciones."
-            : "Selecciona productos para comparar tu carrito."}
+            : "No hay comparaciones para esta lista y zona. Busca productos del catálogo, revisa la ubicación o habilita referencias históricas."}
         </Empty>
       ) : (
         <>
           <div className="store-grid">
             {offers.map((s, i) => (
               <article className={"store-card rank-" + i} key={s.id}>
-                <span className="rank">{s.total !== null ? i + 1 : "—"}</span>
+                <span className="rank">{s.complete ? i + 1 : "—"}</span>
                 <h3>{s.name}</h3>
                 {s.total !== null ? (
                   <>
@@ -299,10 +359,12 @@ export function Cart({
                       {money(s.total)}
                       <small> MXN</small>
                     </strong>
-                    <span className="green">
-                      {i === 0
-                        ? "Menor precio disponible"
-                        : `Diferencia: ${money(s.total - offers[0].total)}`}
+                    <span>
+                      {s.historical
+                        ? "Comparación histórica · no vigente"
+                        : sort === "price" && i === 0
+                          ? "Menor total entre listas completas"
+                          : "Lista completa"}
                     </span>
                     <small>Referencia · {s.date}</small>
                   </>
@@ -313,8 +375,20 @@ export function Cart({
                       <br />
                       verificado
                     </strong>
-                    <small>Falta catálogo para tu lista y municipio.</small>
+                    <small>
+                      No se calcula total con productos sin precio utilizable.
+                    </small>
                   </>
+                )}
+                <p>
+                  {s.matchedCount} de {count} productos con precio
+                </p>
+                {s.distanceKm !== null && (
+                  <small>{s.distanceKm} km aprox.</small>
+                )}
+                <small>{s.address}</small>
+                {s.staleCount > 0 && (
+                  <small>{s.staleCount} precios de más de 30 días.</small>
                 )}
                 <button
                   onClick={() => {
@@ -322,7 +396,7 @@ export function Cart({
                     setSelectedStore(s);
                   }}
                 >
-                  Ir a {s.name}
+                  Ver {s.name}
                   <ArrowRight size={15} />
                 </button>
               </article>
@@ -334,6 +408,7 @@ export function Cart({
           </p>
         </>
       )}
+      <RetailerCart items={items} />
       {selectedStore && (
         <Modal
           title={`Tu lista para ${selectedStore.name}`}
@@ -341,7 +416,8 @@ export function Cart({
         >
           <p>
             La transferencia automática del carrito aún no está disponible para
-            esta tienda. Puedes copiar tu lista y comprar en su sitio oficial.
+            esta tienda. Puedes copiar tu lista y consultar la ubicación de la
+            sucursal.
           </p>
           <ul className="copy-list">
             {items
@@ -356,18 +432,28 @@ export function Cart({
             <Copy size={18} />
             {copied ? "Lista copiada" : "Copiar lista"}
           </Button>
-          {selectedStore.productLinks?.map((p: any) => (
-            <a key={p.url} href={p.url} target="_blank" rel="noreferrer">
-              {p.name} ↗
-            </a>
-          ))}
+          <div className="comparison-lines">
+            {selectedStore.lines?.map((line: any, i: number) => (
+              <p key={i}>
+                <strong>{line.name}</strong>:{" "}
+                {line.price === null
+                  ? line.stale
+                    ? "Referencia antigua no incluida"
+                    : "Sin precio"
+                  : `${money(line.price)} × ${line.quantity} = ${money(line.total)}`}
+                <small>
+                  {line.date ?? ""} · {line.source ?? "PROFECO"}
+                </small>
+              </p>
+            ))}
+          </div>
           <a
             className="button"
             href={selectedStore.url}
             target="_blank"
             rel="noreferrer"
           >
-            Abrir {selectedStore.name}
+            Ver sucursal en Google Maps
             <ArrowRight size={18} />
           </a>
         </Modal>

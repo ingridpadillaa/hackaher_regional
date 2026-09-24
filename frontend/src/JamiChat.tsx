@@ -69,7 +69,13 @@ export function JamiChat() {
     setBusy(true);
     try {
       const result = uid
-        ? await call<Answer>("chat", { message })
+        ? await call<Answer>("chat", {
+            message,
+            history: messages
+              .filter((entry) => entry.role === "user")
+              .slice(-4)
+              .map((entry) => entry.reply),
+          })
         : {
             reply:
               "Crea tu cuenta o inicia sesión. Después agrega tu hogar y sus integrantes, completa la personalización y podrás consultar tus gastos, carrito y metas.",
@@ -104,7 +110,6 @@ export function JamiChat() {
         onClick={() => setOpen(!open)}
       >
         {open ? <X /> : <Jami kind="avatar" />}
-        <span>Jami</span>
       </button>
       {open && (
         <section
@@ -117,7 +122,7 @@ export function JamiChat() {
           }}
         >
           <header>
-            <MessageCircle />
+            <Jami kind="avatar" className="chat-mascot" />
             <strong>Jami, contigo</strong>
             <button
               className="icon-button"
