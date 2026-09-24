@@ -6,13 +6,12 @@ import {
   ShoppingCart,
   Plus,
   Minus,
-  ArrowRight,
   BarChart3,
   Copy,
   Trash2,
 } from "lucide-react";
 import { type State, type CartItem, money } from "./types";
-import { Jami, Button, Empty, ErrorText, Modal, Field } from "./ui";
+import { Button, Empty, ErrorText, Modal, Field } from "./ui";
 import { call, errorMessage } from "./firebase";
 export function Cart({
   state,
@@ -26,7 +25,7 @@ export function Cart({
     state: "",
     source: "manual",
   });
-  const [historical, setHistorical] = useState(false);
+  const [historical, setHistorical] = useState(true);
   const [sort, setSort] = useState("price");
   const [items, setItems] = useState<CartItem[]>(state.cart);
   const [term, setTerm] = useState("");
@@ -193,17 +192,14 @@ export function Cart({
           )}
         </div>
       )}
-      <div className="jami-message">
-        <Jami kind="carrito" />
-        <div className="speech">
-          <h3>Jami te sugiere</h3>
-          <p>
-            {items.length
-              ? "Ajusta las cantidades y compara la misma lista entre tiendas."
-              : "Agrega tus productos y construyamos tu próxima compra."}
-          </p>
-        </div>
-      </div>
+      <section className="card cart-guidance">
+        <h3>Recomendación para tu compra</h3>
+        <p>
+          {items.length
+            ? "Ajusta las cantidades y compara la misma lista entre tiendas."
+            : "Agrega tus productos y construye tu próxima compra."}
+        </p>
+      </section>
       <section className="card shopping-list">
         <div className="section-heading between">
           <h2>
@@ -340,8 +336,11 @@ export function Cart({
           <div className="store-grid">
             {offers.slice(0, 3).map((s, i) => (
               <article className={"store-card rank-" + i} key={s.id}>
-                <span className="rank">{s.complete ? i + 1 : "—"}</span>
-                <h3>{s.name}</h3>
+                <div className="store-card-heading">
+                  <span className="rank">{s.complete ? i + 1 : "—"}</span>
+                  <h3>{s.name}</h3>
+                  <span aria-hidden="true" />
+                </div>
                 {s.total !== null ? (
                   <>
                     <strong className="store-price">
@@ -383,8 +382,7 @@ export function Cart({
                     setSelectedStore(s);
                   }}
                 >
-                  Ver {s.name}
-                  <ArrowRight size={15} />
+                  Ver sucursal
                 </button>
               </article>
             ))}
@@ -441,7 +439,6 @@ export function Cart({
             rel="noreferrer"
           >
             Ver sucursal en Google Maps
-            <ArrowRight size={18} />
           </a>
         </Modal>
       )}

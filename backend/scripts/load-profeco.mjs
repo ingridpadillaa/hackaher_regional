@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { maintenanceClient } from "./firebase-admin-local.mjs";
 const args = process.argv.slice(2),
   get = (k) => args[args.indexOf(k) + 1];
 if (!args.includes("--file"))
@@ -19,12 +20,26 @@ console.log(
     ["products", "stores", "prices"].map((k) => [k, catalog[k].length]),
   ),
 );
-if (!args.includes("--emulator")) {
+const emulator = args.includes("--emulator");
+const production = args.includes("--production");
+if (!emulator && !production) {
   console.log("Validación completada. No se escribió ninguna base.");
   process.exit(0);
 }
-process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8085";
-const db = getFirestore(initializeApp({ projectId: "demo-summa" }));
+if (emulator && production)
+  throw new Error("Elige solo --emulator o --production.");
+let db;
+if (production) {
+  const project = get("--project");
+  if (project !== "hackaher" || !args.includes("--confirm-production"))
+    throw new Error(
+      "Producción requiere --project hackaher --confirm-production.",
+    );
+  ({ db } = await maintenanceClient(project));
+} else {
+  process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8085";
+  db = getFirestore(initializeApp({ projectId: "demo-summa" }));
+}
 for (const [input, collection] of [
   ["products", "catalogProducts"],
   ["stores", "stores"],
@@ -41,4 +56,8 @@ for (const [input, collection] of [
 await db
   .doc("catalogImports/profeco")
   .set({ ...catalog.metadata, importedAt: new Date().toISOString() });
-console.log("Catálogo real cargado solo en emulador demo-summa.");
+console.log(
+  production
+    ? "Catálogo PROFECO real cargado en hackaher."
+    : "Catálogo real cargado solo en emulador demo-summa.",
+);

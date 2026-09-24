@@ -17,7 +17,6 @@ import {
   Bell,
   X,
   CheckCheck,
-  ArrowLeft,
 } from "lucide-react";
 import { auth, configured, call, errorMessage } from "./firebase";
 import { type State } from "./types";

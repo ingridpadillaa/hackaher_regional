@@ -8,7 +8,6 @@ import {
 } from "react";
 import {
   X,
-  ArrowRight,
   House,
   Utensils,
   Car,
@@ -59,12 +58,7 @@ export function Button({
   );
 }
 export function Next({ children = "Continuar" }: { children?: ReactNode }) {
-  return (
-    <>
-      {children}
-      <ArrowRight size={20} />
-    </>
-  );
+  return <>{children}</>;
 }
 export function Modal({
   title,

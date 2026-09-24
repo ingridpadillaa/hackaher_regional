@@ -15,9 +15,16 @@ export async function maintenanceClient(projectId = "hackaher") {
       "This maintenance script requires cloud Firebase, not emulators.",
     );
   const dir = path.join(os.homedir(), ".config/firebase");
-  const files = (await readdir(dir)).filter((f) =>
-    f.endsWith("_application_default_credentials.json"),
-  );
+  const files = await readdir(dir)
+    .then((entries) =>
+      entries.filter((f) =>
+        f.endsWith("_application_default_credentials.json"),
+      ),
+    )
+    .catch((error) => {
+      if (error.code === "ENOENT") return [];
+      throw error;
+    });
   const keyFilename =
     process.env.GOOGLE_APPLICATION_CREDENTIALS ||
     (files.length === 1 ? path.join(dir, files[0]) : null);

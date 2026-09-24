@@ -32,7 +32,7 @@ const people = [
     age: 25,
     income: 15000,
     relationship: "Administrador",
-    occupation: "Empleada · demostración",
+    occupation: "Empleada",
   },
   {
     uid: "demo-hack-vane",
@@ -41,7 +41,7 @@ const people = [
     age: 26,
     income: 12000,
     relationship: "Adulto",
-    occupation: "Empleada · demostración",
+    occupation: "Empleada",
   },
 ];
 const movements = [];
@@ -51,7 +51,7 @@ const add = (date, person, category, amount, note, type = "gasto") =>
     type,
     amount,
     category,
-    note: `${note} · Demostración`,
+    note,
     date,
     method: "manual",
     ownerUid: person.uid,
@@ -117,21 +117,16 @@ if (
   (existing.data().seedTag !== seedTag || existing.data().esDemo !== true)
 )
   throw new Error("Refusing to overwrite a non-demo household.");
-if (existing.exists) {
-  const count = (await home.collection("movements").count().get()).data().count;
-  console.log(
-    JSON.stringify({ alreadySeeded: true, homeId, movements: count }),
-  );
-  process.exit(0);
-}
 const accessPath = fileURLToPath(
   new URL("../.demo-hack-access.local", import.meta.url),
 );
 let access;
+let accessCreated = false;
 try {
   access = JSON.parse(await readFile(accessPath, "utf8"));
 } catch (e) {
   if (e.code !== "ENOENT") throw e;
+  accessCreated = true;
   access = {
     project,
     home: "Hack",
@@ -146,30 +141,105 @@ try {
 await writeFile(accessPath, JSON.stringify(access, null, 2) + "\n", {
   mode: 0o600,
 });
-for (const person of people) {
-  let user;
-  try {
-    user = await auth.getUser(person.uid);
-  } catch (e) {
-    if (e.code !== "auth/user-not-found") throw e;
+async function ensureDemoAccounts(resetPasswords = false) {
+  for (const person of people) {
+    let user;
+    try {
+      user = await auth.getUser(person.uid);
+    } catch (e) {
+      if (e.code !== "auth/user-not-found") throw e;
+    }
+    if (user && user.email !== person.email)
+      throw new Error("Refusing to reuse another user's account.");
+    const profile = await db.doc(`usuarios/${person.uid}`).get();
+    if (
+      profile.exists &&
+      profile.data().hogarId &&
+      profile.data().hogarId !== homeId
+    )
+      throw new Error("Demo account belongs to another household.");
+    const password = access.accounts.find((a) => a.uid === person.uid).password;
+    if (!user)
+      await auth.createUser({
+        uid: person.uid,
+        email: person.email,
+        password,
+        displayName: person.name,
+        emailVerified: false,
+      });
+    else if (resetPasswords) await auth.updateUser(person.uid, { password });
   }
-  if (user && user.email !== person.email)
-    throw new Error("Refusing to reuse another user's account.");
-  const profile = await db.doc(`usuarios/${person.uid}`).get();
-  if (
-    profile.exists &&
-    profile.data().hogarId &&
-    profile.data().hogarId !== homeId
-  )
-    throw new Error("Demo account belongs to another household.");
-  if (!user)
-    await auth.createUser({
-      uid: person.uid,
-      email: person.email,
-      password: access.accounts.find((a) => a.uid === person.uid).password,
-      displayName: person.name,
-      emailVerified: false,
+}
+await ensureDemoAccounts(accessCreated);
+async function cleanVisibleLabels() {
+  const labelBatch = db.batch();
+  labelBatch.update(home, {
+    "preferences.lifestyle":
+      "Compartir gastos, cocinar en casa y usar transporte público.",
+  });
+  for (const person of people)
+    labelBatch.update(home.collection("members").doc(person.uid), {
+      occupation: "Empleada",
     });
+  labelBatch.set(
+    home.collection("goals").doc("demo-emergency"),
+    { name: "Fondo de emergencia" },
+    { merge: true },
+  );
+  labelBatch.set(
+    home.collection("goals").doc("demo-trip"),
+    { name: "Viaje compartido" },
+    { merge: true },
+  );
+  labelBatch.set(
+    home.collection("cart").doc("current"),
+    {
+      items: [
+        {
+          id: "b91dc0cfc5082f945d4ff949810b5b8b",
+          name: "Arroz · Schettino · Bolsa 900 Gr. Super Extra. Verde",
+          quantity: 2,
+          unit: "Bolsa 900 Gr.",
+          selected: true,
+        },
+        {
+          id: "d28c7a88105d59e95714e68e85749e6e",
+          name: "Leche Ultrapasteurizada · Lala · Caja 1 Lt. Entera",
+          quantity: 2,
+          unit: "Caja 1 Lt.",
+          selected: true,
+        },
+      ],
+    },
+    { merge: true },
+  );
+  labelBatch.delete(home.collection("notifications").doc("demo-welcome"));
+  const existingMovements = await home
+    .collection("movements")
+    .where("seedTag", "==", seedTag)
+    .get();
+  for (const movement of existingMovements.docs) {
+    const note = String(movement.data().note ?? "")
+      .replace(/\s*·\s*Demostración\s*$/i, "")
+      .trim();
+    labelBatch.update(movement.ref, { note });
+  }
+  await labelBatch.commit();
+  return existingMovements.size;
+}
+if (existing.exists) {
+  const cleanedMovements = await cleanVisibleLabels();
+  const count = (await home.collection("movements").count().get()).data().count;
+  console.log(
+    JSON.stringify({
+      alreadySeeded: true,
+      homeId,
+      movements: count,
+      accessRecovered: accessCreated,
+      cleanedMovements,
+    }),
+  );
+  process.exit(0);
 }
 const invitationCode = randomBytes(8).toString("hex").toUpperCase();
 const batch = db.batch();
@@ -186,8 +256,7 @@ batch.create(home, {
   preferences: {
     municipality: "Monterrey",
     monthlyBudget: 27000,
-    lifestyle:
-      "Hogar de demostración: compartir gastos, cocinar en casa y usar transporte público.",
+    lifestyle: "Compartir gastos, cocinar en casa y usar transporte público.",
     priorities: ["Fondo de emergencia", "Viaje"],
     assistantTone: "cercano",
     aiConsent: true,
@@ -227,7 +296,7 @@ batch.create(db.doc(`invitations/${invitationCode}`), {
 for (const { id, ...movement } of movements)
   batch.create(home.collection("movements").doc(id), movement);
 batch.create(home.collection("goals").doc("demo-emergency"), {
-  name: "Fondo de emergencia · Demo",
+  name: "Fondo de emergencia",
   target: 18000,
   saved: 3600,
   esPrueba: true,
@@ -236,7 +305,7 @@ batch.create(home.collection("goals").doc("demo-emergency"), {
   createdAt: new Date().toISOString(),
 });
 batch.create(home.collection("goals").doc("demo-trip"), {
-  name: "Viaje compartido · Demo",
+  name: "Viaje compartido",
   target: 12000,
   saved: 1200,
   esPrueba: true,
@@ -247,29 +316,20 @@ batch.create(home.collection("goals").doc("demo-trip"), {
 batch.create(home.collection("cart").doc("current"), {
   items: [
     {
-      id: "demo-rice",
-      name: "Arroz · Demo",
-      quantity: 1,
-      unit: "kg",
+      id: "b91dc0cfc5082f945d4ff949810b5b8b",
+      name: "Arroz · Schettino · Bolsa 900 Gr. Super Extra. Verde",
+      quantity: 2,
+      unit: "Bolsa 900 Gr.",
       selected: true,
     },
     {
-      id: "demo-milk",
-      name: "Leche · Demo",
+      id: "d28c7a88105d59e95714e68e85749e6e",
+      name: "Leche Ultrapasteurizada · Lala · Caja 1 Lt. Entera",
       quantity: 2,
-      unit: "litros",
+      unit: "Caja 1 Lt.",
       selected: true,
     },
   ],
-  esPrueba: true,
-  seedTag,
-});
-batch.create(home.collection("notifications").doc("demo-welcome"), {
-  title: "Hogar de demostración",
-  message:
-    "Los movimientos de Rosy y Vane son ficticios y cubren tres meses calendario hasta hoy. No representan datos bancarios reales.",
-  kind: "demo",
-  createdAt: new Date().toISOString(),
   esPrueba: true,
   seedTag,
 });

@@ -463,6 +463,21 @@ form {
   font-size: 14px;
   color: var(--muted);
 }
+.profile-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  align-items: center;
+  gap: 16px;
+  min-height: 180px;
+}
+.profile-intro .profile-mascot {
+  width: 170px;
+  height: 170px;
+  max-width: none;
+  object-fit: contain;
+  justify-self: end;
+  mix-blend-mode: multiply;
+}
 .step-label {
   color: #a88c83;
   font-size: 10px;
@@ -1338,9 +1353,8 @@ form {
   gap: 8px;
 }
 .store-card {
-  position: relative;
   border: 1px solid #d8eacc;
-  padding: 15px 7px 8px;
+  padding: 12px 12px 10px;
   border-radius: 19px;
   background: white;
   text-align: center;
@@ -1350,18 +1364,24 @@ form {
   align-items: center;
   gap: 7px;
 }
+.store-card-heading {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: start;
+  gap: 8px;
+}
 .store-card h3 {
   font-size: 16px;
-  margin-top: 5px;
+  margin: 3px 0 0;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 .store-card .rank {
-  position: absolute;
-  left: 4px;
-  top: 2px;
   background: #2bb74a;
   color: white;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   font-size: 14px;
   font-weight: 900;
@@ -1392,12 +1412,15 @@ form {
   background: #2ab641;
   color: white;
   border-radius: 20px;
-  padding: 10px 3px;
+  padding: 10px 12px;
   width: 100%;
   font-size: 11px;
   font-weight: 900;
   margin-top: auto;
-  min-height: 38px;
+  min-height: 44px;
+}
+.store-card button svg {
+  flex: 0 0 auto;
 }
 .store-card.rank-1 {
   border-color: #f5e6be;
@@ -2001,6 +2024,14 @@ body,
   top: -4px;
   left: -18px;
 }
+.jami-bubble .chat-bubble-mascot {
+  width: 76px;
+  height: 76px;
+  top: -8px;
+  left: -8px;
+  object-fit: cover;
+  object-position: center;
+}
 .jami-chat header .chat-mascot {
   width: 68px;
   height: 68px;
@@ -2175,6 +2206,15 @@ details p {
   }
 }
 @media (max-width: 480px) {
+  .profile-intro {
+    grid-template-columns: minmax(0, 1fr) 104px;
+    gap: 8px;
+    min-height: 132px;
+  }
+  .profile-intro .profile-mascot {
+    width: 118px;
+    height: 118px;
+  }
   .monthly-report,
   .financial-agenda {
     padding: 16px;
@@ -2270,7 +2310,76 @@ details p {
   overflow-wrap: anywhere;
 }
 
-/* Daily review keeps the original flames and counter. */
+/* Clean visual language: no decorative characters or mascot artwork. */
+.motivation-card,
+.cart-guidance {
+  background: #feeee6;
+}
+.motivation-card h2,
+.cart-guidance h3,
+.encouragement h3 {
+  color: var(--pink);
+}
+.motivation-card p,
+.cart-guidance p,
+.encouragement p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+.encouragement {
+  display: block;
+  padding: 22px 24px;
+}
+.jami-bubble {
+  color: var(--pink);
+}
+.jami-bubble > svg {
+  width: 28px;
+  height: 28px;
+}
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+.card-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 480px) {
+  .monthly-report .category-row {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    column-gap: 8px;
+    row-gap: 5px;
+    margin: 14px 0;
+  }
+  .monthly-report .category-row .category-icon {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+  .monthly-report .category-row > span:nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .monthly-report .category-row .progress {
+    display: block;
+    grid-column: 2 / 4;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+  }
+  .monthly-report .category-row strong {
+    grid-column: 3;
+    grid-row: 1;
+    white-space: nowrap;
+  }
+}
+
+/* Daily review uses compact progress segments and a counter. */
 .streak-count {
   flex-shrink: 0;
 }
