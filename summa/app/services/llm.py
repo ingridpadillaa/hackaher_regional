@@ -9,6 +9,14 @@ class ExtractionUnavailable(ValueError):
     pass
 
 
+class PartialExtractionUnavailable(ExtractionUnavailable):
+    def __init__(self, movements):
+        self.movements = movements
+        super().__init__(
+            "Jami no pudo leer todo el documento. Revisa los datos recuperados y completa lo que falta manualmente."
+        )
+
+
 class LLMClient(Protocol):
     def extract(
         self, prompt: str, schema: type[BaseModel], media: bytes | None = None, mime: str | None = None

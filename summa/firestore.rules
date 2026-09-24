@@ -18,7 +18,7 @@ service cloud.firestore {
       }
       match /integrantes/{uid} { allow read: if member(hid); allow write: if false; }
       match /{collection}/{doc} {
-        allow read: if member(hid) && collection in ['pagosFijos', 'cuentas', 'tickets', 'mandado', 'preciosTicket', 'alertas'];
+        allow read: if member(hid) && collection in ['pagosFijos', 'cuentas', 'tickets', 'mandado', 'preciosTicket', 'alertas', 'productosHogar', 'carrito', 'metas', 'racha', 'notificaciones', 'recomendaciones', 'presupuesto'];
         allow write: if false;
       }
     }

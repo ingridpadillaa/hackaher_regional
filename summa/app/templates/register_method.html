@@ -1,1 +1,2 @@
-<h1>Registrar gasto</h1><label>Método<select id="register-method" onchange="location.href='/movimientos/nuevo?metodo='+this.value">{% for key,label in [('ticket','Ticket'),('foto','Foto'),('manual','Manual'),('pdf','PDF'),('voz','Voz')] %}<option value="{{ key }}" {{ 'selected' if key==(kind|default('manual')) }}>{{ label }}</option>{% endfor %}</select></label>
+<h1>Registrar gasto</h1><label>Método<select id="register-method"
+        onchange="location.href='/movimientos/nuevo?metodo='+this.value">{% for key,label in [('ticket','Ticket'),('foto','Foto'),('manual','Manual'),('pdf','PDF'),('voz','Voz')] %}<option value="{{ key }}" {{ 'selected' if key==(kind|default("manual")) }}>{{ label }}</option>{% endfor %}</select></label>

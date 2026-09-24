@@ -269,7 +269,14 @@ def sync_prices(repository, file_path=None):
             finally:
                 staging.close()
     except Exception as error:
-        meta["errores"] = [str(error)[:300]]
+        with connect(repository) as target:
+            target.execute(
+                "UPDATE profeco_meta SET errores=? WHERE huella=?",
+                (
+                    json.dumps(["No se pudo validar o descargar el archivo oficial."]),
+                    meta.get("ultimaHuella", ""),
+                ),
+            )
 
         raise ValueError(
             "No se actualizaron los precios de PROFECO. Revisa el archivo o usa --file; los precios anteriores siguen disponibles."

@@ -1,1 +1,17 @@
-{"name":"Summa · Tu dinero, con calma","short_name":"Summa","start_url":"/","display":"standalone","background_color":"#FFF6F1","theme_color":"#F26B3A","lang":"es-MX","icons":[{"src":"/static/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{
+  "name": "Summa · Tu dinero, con calma",
+  "short_name": "Summa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF7F4",
+  "theme_color": "#EC3A6A",
+  "lang": "es-MX",
+  "icons": [
+    {
+      "src": "/static/img/jami-avatar.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

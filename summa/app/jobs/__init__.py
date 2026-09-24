@@ -7,7 +7,6 @@ from flask import Blueprint, abort, current_app, request
 
 from app.connectors.base import ProviderUnavailable
 from app.connectors.router import ProviderRouter
-from app.services.alerts import refresh_alerts
 from app.services.bank_sync import sync_connection
 from app.services.firestore_repo import repo
 
@@ -23,7 +22,14 @@ def authenticate():
 
 @bp.post("/<job>")
 def run(job):
-    if job not in ("profeco-sync", "sync-banks", "provider-health", "daily-alerts"):
+    if job not in (
+        "profeco-sync",
+        "sync-banks",
+        "provider-health",
+        "daily-alerts",
+        "evaluar-rachas",
+        "generar-recomendaciones",
+    ):
         abort(404)
     start = time.monotonic()
     path = "jobLocks/" + job
@@ -71,8 +77,20 @@ def run(job):
                             return {"status": "partial", "processed": count}, 202
                         sync_connection(household["id"], connection["id"])
                         count += 1
+                elif job == "evaluar-rachas":
+                    from app.services.streaks import evaluate
+
+                    evaluate(repo(), household["id"])
+                    count += 1
+                elif job == "generar-recomendaciones":
+                    from app.services.recommendations import generate
+
+                    generate(repo(), household["id"])
+                    count += 1
                 else:
-                    refresh_alerts(repo(), household["id"])
+                    from app.services.notifications import refresh
+
+                    refresh(repo(), household["id"])
                     count += 1
         return {"status": "ok", "processed": count}
     except ValueError:

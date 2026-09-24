@@ -1,36 +1,18 @@
-# Entrega en Rosy
+# Estado de la migración Summa
+Código en la rama Rosy, entregado por fases con commits. No se ha publicado ni desplegado.
 
-Se implementaron las doce fases del prototipo con un commit por fase. Los commits son locales; no se publicó la rama ni se desplegaron servicios.
+Implementado: cuentas vacías, diseño Summa e ilustraciones originales Jami, personalización de siete pasos, ingresos combinados, disponible desglosado, registro unificado con confirmación, presupuesto/ahorro por reglas, notificaciones limitadas, carrito/reposición, ETL PROFECO SQLite, comparación geográfica y por cobertura, Jami con herramientas, reportes con umbrales, banco simulado identificado, rachas con evidencia, metas y donativos externos.
 
-| Fase | Resultado |
-| --- | --- |
-| 1 | Factory Flask, blueprints, Firebase auth, diseño, PWA, Docker/configuración |
-| 2 | Hogar demo reproducible con cuatro meses, 14 tickets y precios etiquetados |
-| 3 | Onboarding y presupuesto, salud, colchón y próximos pagos |
-| 4 | Captura manual, ticket, categorías, privacidad, confirmación y lista |
-| 5 | Voz, recibos y PDF con extracción o ejemplos explícitos |
-| 6 | Reportes y comparaciones entre periodos |
-| 7 | Banco de prueba, failover persistente, cifrado, sincronización y panel |
-| 8 | Pagos fijos, tarjetas, recurrencias, alertas y registro atómico |
-| 9 | ETL por bloques, reposición y mandado compartido |
-| 10 | Calendario y previsión de temporadas |
-| 11 | Copiloto con herramientas de backend y modo local |
-| 12 | Reglas, privacidad, exportación/borrado, revisión y pruebas |
+Validación local: pytest con bases temporales, comprobación Ruff, compilación de todas las plantillas y validación Node de JavaScript estático y generado. El flujo nuevo hogar → pantallas principales → borrado se prueba con el cliente Flask. OCR se prueba con respuestas controladas; no se hizo una llamada de pago ni se leyó un documento real mediante IA.
 
-## Validado localmente
+Pendientes externos:
+- Logo oficial Summa no incluido en los archivos recibidos; se usa texto Summa y el avatar original Jami. No se generaron logo-simbolo ni iconos oficiales 192/512.
+- Configurar Firebase Auth/Firestore, Gemini y ENCRYPTION_KEY. Reglas/índices no desplegados ni verificados con emulador.
+- Descargar/cargar el archivo real de PROFECO. Las pruebas de ETL usan fixtures temporales explícitos, sin presentarlos como datos reales.
+- Syncfy/Finerio requieren contratos y credenciales sandbox; no se inventaron endpoints. Grabación de respuestas reales queda pendiente de habilitar esos adaptadores.
+- Redirección de búsqueda configurada para Chedraui; otras cadenas requieren dominios/URLs verificados y un sku_map real para precargar carritos. El ranking muestra solo las tiendas con precios suficientes.
+- DONATION_URL y datos del responsable del aviso ARCO pendientes de configuración.
+- Docker y Render no ejecutados. Render gratuito no conserva cambios de SQLite tras reinicios/despliegues; vuelve a cargar PROFECO desde fuente oficial. El despliegue local conserva data/precios.db.
+- No se repitió la revisión visual en Chrome: la ejecución anterior del navegador fue rechazada. No se afirma validación visual de esta migración.
 
-- 40 pruebas pytest: reglas de negocio, deduplicación, resúmenes, pagos, ETL, privacidad, endpoints y borrado.
-- Revisión Ruff: sin errores en las reglas configuradas.
-- Chrome real sin interfaz, móvil y escritorio: el recorrido inicial pasó sin errores JavaScript ni desbordamiento horizontal. Una comprobación posterior completó también onboarding, QR y failover, pero detectó un error de sintaxis en la configuración de Tailwind añadida después. Se corrigió y se validó con Node; no se repitió Chrome tras la corrección porque se rechazó el permiso de ejecución.
-- Inicio de Flask y respuesta de `/health`.
-
-## Límites y pendientes externos
-
-- Firebase Auth/Firestore/Storage y Gemini están implementados, pero no se validaron contra cuentas reales ni emuladores en este equipo.
-- Los adaptadores reales Syncfy/Finerio son fronteras deshabilitadas, con TODO explícito; la demo usa simulaciones para los tres proveedores. Requieren sandbox, contratos de respuesta y widget autorizado. No se hicieron conexiones bancarias reales.
-- El ETL se probó con archivos sintéticos; falta validar el archivo anual/diccionario actual de PROFECO. Los fixtures no se presentan como precios oficiales.
-- Docker/Cloud Run/Hosting/Scheduler no fueron ejecutados ni desplegados. Python 3.12 está configurado en Docker/CI; las pruebas locales usaron 3.13.7.
-- Completar los datos del responsable y revisar el aviso de privacidad antes de admitir datos reales.
-- Los estilos y gráficas usan CDN. La PWA cachea recursos propios estáticos; no ofrece registros financieros sin conexión ni cachea datos privados.
-- La comparación de precios exige identidad coincidente de producto. El mapeo del catálogo real de PROFECO y normalización entre marcas debe calibrarse con archivos/tickets reales.
-- Grabación/reproducción de respuestas bancarias reales y cola de sincronización inmediata en Cloud Run quedan pendientes hasta habilitar proveedores reales.
+Las estimaciones son de planificación. La personalización pide confirmar un monto para la meta; no inventa un costo de viaje/escuela. El historial de chat se mantiene en sessionStorage y se elimina al cerrar sesión.

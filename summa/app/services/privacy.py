@@ -20,4 +20,5 @@ HOUSEHOLD_COLLECTIONS = (
     "mandado",
     "evidenciaRacha",
     "metricas",
+    "limitesNotificaciones",
 )

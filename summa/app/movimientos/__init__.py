@@ -45,6 +45,9 @@ def new():
                 g.user["uid"],
                 dict(request.form, privado=bool(request.form.get("privado"))),
             )
+            from app.services.notifications import refresh
+
+            refresh(repo(), g.hogar_id)
             flash("Listo, tu movimiento quedó guardado.")
             return redirect("/movimientos")
         except ValueError as error:
@@ -148,6 +151,22 @@ def upload(kind):
         draft_id = repo().add(f"hogares/{g.hogar_id}/borradores", draft)
         return redirect(f"/movimientos/confirmar/{draft_id}")
     except (ValueError, OSError) as error:
+        from app.services.llm import PartialExtractionUnavailable
+
+        if isinstance(error, PartialExtractionUnavailable):
+            draft_id = repo().add(
+                f"hogares/{g.hogar_id}/borradores",
+                dict(
+                    uid=g.user["uid"],
+                    origin=kind,
+                    movements=error.movements,
+                    receipt=None,
+                    demo=False,
+                    created=datetime.now(UTC).isoformat(),
+                ),
+            )
+            flash(str(error))
+            return redirect("/movimientos/confirmar/" + draft_id)
         flash(
             str(error)
             if isinstance(error, ValueError)
@@ -255,6 +274,9 @@ def confirm(draft_id):
                         total=receipt["total"],
                         productos=[
                             dict(
+                                productoId=__import__(
+                                    "app.services.products", fromlist=["product_id"]
+                                ).product_id(p["nombre_normalizado"]),
                                 nombreOriginal=p["nombre_original"],
                                 nombreNormalizado=p["nombre_normalizado"],
                                 cantidad=p["cantidad"],
@@ -307,7 +329,7 @@ def confirm(draft_id):
                     repo().put(f"{base}/pagosFijos/{payment_id}", payment)
             draft["confirmed"] = True
             repo().put(path, draft)
-            from app.services.alerts import refresh_alerts
+            from app.services.notifications import refresh as refresh_alerts
 
             refresh_alerts(repo(), g.hogar_id)
             flash(f"{count} movimiento(s) guardado(s). Los duplicados se omitieron.")
@@ -325,6 +347,14 @@ def reports():
     window = request.args.get("periodo", "quincena")
     return render_template(
         "reports.html",
+        monthly_actual=__import__("app.services.reports", fromlist=["summarize"]).summarize(
+            visible_movements(g.hogar_id, g.user["uid"]),
+            __import__("app.services.clock", fromlist=["local_today"])
+            .local_today()
+            .replace(day=1)
+            .isoformat(),
+            "9999-12-31",
+        )["categories"],
         plan=__import__("app.services.planning", fromlist=["refresh_plan"]).refresh_plan(repo(), g.hogar_id),
         recommendations=repo().get(
             f"hogares/{g.hogar_id}/recomendaciones/"

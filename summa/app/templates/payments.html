@@ -26,14 +26,16 @@
                         <p class="notice">Estimación: tu consumo se acerca al umbral DAC configurado ({{ dac }} kWh/mes). Confirma tu región tarifaria.</p>
                     {% endif %}
                 {% endif %}
-                <form method="post" action="/perfil/personalizacion/pagos/{{ payment.id }}/pagar">
+                <form method="post"
+                      action="/perfil/personalizacion/pagos/{{ payment.id }}/pagar">
                     <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
                     <input type="hidden" name="due" value="{{ payment.proximaFecha }}">
                     <button class="secondary">Ya lo pagué ✓</button>
                 </form>
                 <details style="margin-top:16px">
                     <summary>Editar monto y fecha</summary>
-                    <form method="post" action="/perfil/personalizacion/pagos/{{ payment.id }}/editar">
+                    <form method="post"
+                          action="/perfil/personalizacion/pagos/{{ payment.id }}/editar">
                         <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
                         <label>
                             Monto<input name="amount"

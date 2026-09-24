@@ -9,6 +9,7 @@ from pathlib import Path
 
 class Repository:
     def __init__(self, app):
+        self.testing = app.config.get("TESTING", False)
         self.remote = app.config["DATA_BACKEND"] == "firestore"
         if self.remote:
             from firebase_admin import firestore
@@ -55,7 +56,16 @@ class Repository:
 
     def list(self, collection):
         if self.remote:
-            return [dict(doc.to_dict(), id=doc.id) for doc in self.db.collection(collection).stream()]
+            try:
+                return [dict(doc.to_dict(), id=doc.id) for doc in self.db.collection(collection).stream()]
+            except Exception as error:
+                import logging
+                import re
+
+                link = re.search(r"https://console.firebase.google.com/[^\s]+", str(error))
+                if link:
+                    logging.getLogger(__name__).error("Índice requerido: %s", link.group(0))
+                raise
         prefix = collection + "/"
         with self.connection() as conn:
             rows = conn.execute("SELECT path,value FROM docs WHERE path LIKE ?", (prefix + "%",)).fetchall()

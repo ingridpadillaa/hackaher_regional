@@ -120,6 +120,18 @@ def export():
         "movimientos": [m for m in repo().list(base + "/movimientos") if m["integranteId"] == g.user["uid"]],
         "pagosFijos": repo().list(base + "/pagosFijos"),
     }
+    for collection in ("metas", "racha", "presupuesto", "carrito", "notificaciones", "productosHogar"):
+        data[collection] = repo().list(base + "/" + collection)
+    data["integrantes"] = repo().list(base + "/integrantes")
+    data["tickets"] = [t for t in repo().list(base + "/tickets") if t.get("integranteId") == g.user["uid"]]
+    data["cuentas"] = [
+        a
+        for a in repo().list(base + "/cuentas")
+        if any(
+            c["id"] == a.get("conexionId") and c.get("uid") == g.user["uid"]
+            for c in repo().list(base + "/conexiones")
+        )
+    ]
     response = jsonify(data)
     response.headers["Content-Disposition"] = 'attachment; filename="summa-mis-datos.json"'
     return response
@@ -136,7 +148,8 @@ def delete_account():
         return redirect("/perfil")
     base = f"hogares/{g.hogar_id}"
     members = repo().list(base + "/integrantes")
-    sole = len(members) == 1
+    account_members = [m for m in members if repo().get("usuarios/" + m["id"])]
+    sole = len(account_members) <= 1
     try:
         for connection in repo().list(base + "/conexiones"):
             if sole or connection.get("uid") == g.user["uid"]:
@@ -157,25 +170,16 @@ def delete_account():
             if sole or item.get("integranteId") == g.user["uid"]:
                 repo().delete(f"{base}/{collection}/{item['id']}")
     if sole:
-        for collection in (
-            "integrantes",
-            "pagosFijos",
-            "cuentas",
-            "conexiones",
-            "tickets",
-            "preciosTicket",
-            "mandado",
-            "reglasCategoria",
-            "alertas",
-            "resumenes",
-        ):
+        from app.services.privacy import HOUSEHOLD_COLLECTIONS
+
+        for collection in HOUSEHOLD_COLLECTIONS:
             for item in repo().list(base + "/" + collection):
                 repo().delete(f"{base}/{collection}/{item['id']}")
         repo().delete(base)
     else:
         repo().delete(base + "/integrantes/" + g.user["uid"])
         if g.user["rol"] == "admin":
-            successor = next(m for m in members if m["id"] != g.user["uid"])
+            successor = next(m for m in account_members if m["id"] != g.user["uid"])
             successor["rol"] = "admin"
             repo().put(base + "/integrantes/" + successor["id"], successor)
             user = repo().get("usuarios/" + successor["id"])
@@ -185,6 +189,21 @@ def delete_account():
         from app.services.alerts import refresh_alerts
 
         refresh_alerts(repo(), g.hogar_id)
+        # Rebuild derived products after removing personal tickets.
+        for collection in (
+            "productosHogar",
+            "recomendaciones",
+            "presupuesto",
+            "racha",
+            "evidenciaRacha",
+            "reglasCategoria",
+            "notificaciones",
+        ):
+            for item in repo().list(base + "/" + collection):
+                repo().delete(base + "/" + collection + "/" + item["id"])
+        from app.services.products import update_products
+
+        update_products(repo(), g.hogar_id)
     if not (current_app.config.get("LOCAL_MODE") or current_app.config.get("TESTING")):
         from firebase_admin import auth
 
@@ -240,3 +259,8 @@ def dismiss_donation():
     user["ocultarDonativos"] = True
     repo().put(f"usuarios/{g.user['uid']}", user)
     return redirect("/perfil")
+
+
+@bp.get("/terminos")
+def terms():
+    return render_template("terms.html")

@@ -2,15 +2,16 @@
 {% block content %}
     <section class="card form-card">
         <span class="eyebrow">MENOS CAPTURA, MÁS VIDA</span>
-        {% include 'register_method.html' %}
+        {% include "register_method.html" %}
         <p>Revisa cada dato antes de guardarlo. Tú tienes la última palabra.</p>
-        <form method="post" action="/movimientos/importar/{{ kind }}"
+        <form method="post"
+              action="/movimientos/importar/{{ kind }}"
               enctype="multipart/form-data"
               onsubmit="this.querySelector('[data-status]').hidden=false">
             <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
             {% if kind=="voz" %}
                 <label>
-                    ¿Qué movimiento hiciste?<textarea id="voice-text" name="text" rows="4" maxlength="2000" placeholder="Ayer gasté 150 en gasolina">
+                    ¿Qué movimiento hiciste?<textarea id="voice-text" name="text" rows="4" maxlength="2000" placeholder="Describe tu gasto, monto y fecha">
 </textarea>
                 </label>
                 <button type="button" id="voice-button" class="secondary">♫ Usar micrófono</button>
@@ -31,7 +32,6 @@
                 <p class="subtle">Hasta 10 MB. Tus fotos y documentos no se almacenan.</p>
             {% endif %}
             <button>Analizar y revisar →</button>
-            
             <p data-status hidden role="status">Jami está leyendo tu información…</p>
         </form>
         <a href="/movimientos/nuevo?metodo=manual" class="subtle">Prefiero capturarlo a mano ↗</a>

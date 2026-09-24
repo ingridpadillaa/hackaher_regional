@@ -1,20 +1,4 @@
-:root {
-    --bg: #FFF6F1;
-    --surface: #fff;
-    --surface-soft: #F6EEFB;
-    --primary: #F26B3A;
-    --primary-soft: #FFD8C7;
-    --pink: #F6A5C0;
-    --lavender: #C9B6EC;
-    --ink: #16131A;
-    --muted: #675e6e;
-    --success: #19774a;
-    --danger: #be3035;
-    --warning: #F2A93B;
-    --gradient-hero: linear-gradient(160deg, #F9C6DA 0%, #F7B7A3 55%, #F4A77F 100%);
-    --radius-card: 24px;
-    --radius-pill: 999px
-}
+
 
 * {
     box-sizing: border-box
@@ -733,3 +717,5 @@ canvas {
 body{background:var(--bg);color:var(--ink)}.hero{background:var(--gradient-hero)}.card{border-radius:var(--radius-card)}.copilot-launch{background:var(--brand-pink)}.bottom-nav a.active{color:var(--brand-pink)}.jami-art{width:min(220px,60vw);height:auto;object-fit:contain;border-radius:24px}.budget-hero{background:var(--gradient-card)}
 
 .store-offer{padding:20px;margin:12px 0;border-radius:24px;border:2px solid}.rank-1{border-color:var(--success)}.rank-2{border-color:var(--warning)}.rank-3{border-color:var(--danger)}
+
+:root{--primary:var(--brand-pink);--primary-soft:var(--blush);--pink:var(--brand-pink)}.subtle,.muted,small{color:#675E6E}button,a.button,input,select,summary{min-height:44px}.copilot-launch img{border-radius:50%;object-fit:contain}.login-grid{background:var(--gradient-hero);border-radius:24px;padding:20px}fieldset{border:1px solid #ddd0d8;border-radius:16px;padding:16px;margin:16px 0}progress{width:100%;accent-color:var(--brand-pink);height:12px}table{max-width:100%}.store-offer a{margin-top:12px}.rank-1 a{background:#176b42}.rank-2 a{background:#8a5d00}.rank-3 a{background:#ac253c}.card{overflow-wrap:anywhere}.income{color:#19774a}.expense{color:#be3035}@media(max-width:600px){.login-grid{padding:0}.list-row{flex-wrap:wrap}.table-wrap{overflow-x:auto}dialog{max-width:calc(100vw - 24px)}}

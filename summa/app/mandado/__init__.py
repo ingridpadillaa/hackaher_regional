@@ -99,3 +99,20 @@ def dismiss(product):
 
     repo().atomic([path], update)
     return redirect("/mandado")
+
+
+@bp.post("/comprar/<int:rank>")
+@login_required
+def buy(rank):
+    from flask import abort
+
+    from app.services.clock import local_today
+
+    totals = shopping_data(g.hogar_id)["totals"]
+    if not 0 <= rank < len(totals) or not totals[rank].get("buy_url"):
+        abort(404)
+    repo().add(
+        f"hogares/{g.hogar_id}/metricas",
+        dict(tipo="click_supermercado", cadena=totals[rank]["chain"], fecha=local_today().isoformat()),
+    )
+    return redirect(totals[rank]["buy_url"], code=303)

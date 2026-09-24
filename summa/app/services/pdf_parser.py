@@ -55,6 +55,10 @@ def parse_pdf(content):
                         )
                     )
     except ValueError:
+        if result:
+            from .llm import PartialExtractionUnavailable
+
+            raise PartialExtractionUnavailable(result)
         raise
     except Exception as exc:
         raise ValueError(

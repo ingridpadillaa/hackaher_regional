@@ -11,7 +11,7 @@
     <div class="tabs">
         <a class="selected" href="/movimientos">Mis movimientos</a>
         <a href="/movimientos/reportes">Reportes</a>
-        <a href="/movimientos/importar/foto">▧ Ticket</a>
+        <a href="/movimientos/nuevo?metodo=ticket">▧ Ticket</a>
         <a href="/movimientos/importar/voz">♫ Voz</a>
         <a href="/movimientos/importar/recibo">ϟ Recibo</a>
         <a href="/movimientos/importar/pdf">▤ PDF</a>
@@ -46,7 +46,7 @@
             <label>
                 Origen<select name="origen">
                 <option value="">Todos</option>
-                {% for origin in ['manual','foto','voz','recibo','pdf','banco'] %}
+                {% for origin in ['manual','ticket','foto','voz','pdf','banco'] %}
                     <option {{ 'selected' if request.args.get("origen")==origin }}>{{ origin }}</option>
                 {% endfor %}
                 </select>
@@ -59,7 +59,7 @@
                 <div class="list-row">
                     <span class="list-icon">{{ categories.get(item.categoria,'◇') }}</span>
                     <div class="detail">
-                        <strong>{{ item.descripcion }}</strong>
+                        <strong>{{ item.descripcion }}</strong>{% if item.esPrueba %}<span class="badge">Datos de prueba</span>{% endif %}
                         <p class="subtle">{{ item.categoria }} · {{ item.metodoPago }} {% if item.privado %}· Privado{% endif %}</p>
                         <span class="pill">{{ item.origen }}</span>
                     </div>

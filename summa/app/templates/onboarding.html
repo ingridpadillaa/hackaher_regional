@@ -1,24 +1,96 @@
-{% extends "base.html" %}{% block content %}
-<section class="card form-card" x-data="{step:1,count:{{ [members|length,1]|max }}}">
-<img class="jami-art" src="/static/img/jami-tareas.png" alt="Jami te acompaña a crear tu hogar">
-<h1>{{ 'Personalización' if g.hogar_id else 'Crea tu hogar' }}</h1>
-<progress max="7" :value="step" value="1" aria-label="Avance de personalización"></progress><p>Paso <span x-text="step">1</span> de 7</p>
-<form method="post"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
-<section x-show="step===1"><h2>Tu hogar</h2>{% if not g.hogar_id %}<label>Unirme con código<input name="code" maxlength="16" value="{{ request.args.get('code','') }}"></label><p>O crea un hogar con tus datos:</p>{% endif %}
-{% for key,label in [('nombre','Nombre de tu hogar'),('estado','Estado'),('municipio','Municipio'),('codigoPostal','Código postal (opcional)')] %}<label>{{ label }}<input name="{{ key }}" value="{{ household.get(key,'') }}" maxlength="100"></label>{% endfor %}
-<label><input type="checkbox" name="location_consent" id="location-consent" {{ 'checked' if household.ubicacion }}>Permitir ubicación para buscar supermercados cercanos (opcional)</label><button type="button" class="secondary" id="locate">Usar mi ubicación</button><p id="location-status" role="status">Si no la compartes, usaremos tu municipio.</p><input type="hidden" id="lat" name="lat" value="{{ household.get('ubicacion',{}).get('lat','') }}"><input type="hidden" id="lng" name="lng" value="{{ household.get('ubicacion',{}).get('lng','') }}"></section>
-<section x-show="step===2"><h2>¿Quiénes viven aquí?</h2>
-{% for i in range(20) %}{% set m=members[i] if i<members|length else {} %}<fieldset x-show="count>{{ i }}" :disabled="count<={{ i }}"><legend>Persona {{ i+1 }}</legend><input type="hidden" name="member_{{ i }}_id" value="{{ m.get('id','') }}">
-{% for key,label,type in [('nombre','Nombre','text'),('edad','Edad','number'),('parentesco','Parentesco','text'),('ocupacion','Ocupación','text')] %}<label>{{ label }}<input name="member_{{ i }}_{{ key }}" type="{{ type }}" value="{{ m.get(key,g.user.nombre if key=='nombre' and i==0 else '') }}" {% if key=='edad' %}min="0" max="120"{% endif %}></label>{% endfor %}
-<label>Escolaridad<select name="member_{{ i }}_escolaridad">{% for level in ['ninguna','primaria','secundaria','preparatoria','universidad','posgrado'] %}<option {{ 'selected' if m.escolaridad==level }}>{{ level }}</option>{% endfor %}</select></label>
-<label><input type="checkbox" name="member_{{ i }}_estudiaActualmente" {{ 'checked' if m.estudiaActualmente }}>Estudia actualmente</label><label>Nivel que estudia<input name="member_{{ i }}_nivelQueEstudia" value="{{ m.get('nivelQueEstudia','') }}"></label>
-<label>Tipo de empleo<select name="member_{{ i }}_tipoEmpleo">{% for job in ['formal','informal','independiente','hogar','estudiante','jubilado','desempleado'] %}<option {{ 'selected' if m.tipoEmpleo==job }}>{{ job }}</option>{% endfor %}</select></label></fieldset>{% endfor %}<button type="button" class="secondary" @click="count=Math.min(20,count+1)">＋ Agregar persona</button></section>
-<section x-show="step===3"><h2>Ingresos por persona</h2><p>Si todavía no conoces el monto, déjalo vacío.</p>{% for i in range(20) %}{% set m=members[i] if i<members|length else {} %}<fieldset x-show="count>{{ i }}" :disabled="count<={{ i }}"><legend>Persona {{ i+1 }} · {{ m.get('nombre','') }}</legend><label>Ingreso<input type="number" min="0" step=".01" name="member_{{ i }}_ingreso" value="{{ m.get('ingreso','') }}"></label><label>Periodicidad<select name="member_{{ i }}_periodicidadIngreso">{% for cadence in ['semanal','quincenal','mensual','variable'] %}<option {{ 'selected' if m.periodicidadIngreso==cadence }}>{{ cadence }}</option>{% endfor %}</select></label><label>Próxima fecha de cobro<input type="date" name="member_{{ i }}_proximaFechaIngreso" value="{{ m.get('proximaFechaIngreso','') }}"></label></fieldset>{% endfor %}</section>
-<section x-show="step===4" x-data="{payments:0}"><h2>Pagos habituales</h2>{% if g.hogar_id %}<a href="/perfil/personalizacion/pagos">Editar pagos existentes</a>{% endif %}<p>Agrega solo los pagos que tienes. El monto de tarjeta es el pago para no generar intereses.</p>
-<datalist id="payment-names">{% for name in payment_templates %}<option value="{{ name }}">{% endfor %}</datalist>
-{% for i in range(20) %}<fieldset x-show="payments>{{ i }}" :disabled="payments<={{ i }}"><legend>Nuevo pago {{ i+1 }}</legend><label>Nombre<input name="payment_{{ i }}_nombre" list="payment-names"></label><label>Monto<input name="payment_{{ i }}_monto" type="number" min="0" step=".01"></label><label>Próximo vencimiento<input name="payment_{{ i }}_fecha" type="date"></label><label>Periodicidad<select name="payment_{{ i }}_periodicidad">{% for c in ['mensual','quincenal','semanal','bimestral'] %}<option>{{ c }}</option>{% endfor %}</select></label><label>Tipo<select name="payment_{{ i }}_tipo">{% for c in ['servicio','suscripcion','renta_colegiatura','credito','tarjeta_credito','otro'] %}<option>{{ c }}</option>{% endfor %}</select></label><label>Categoría<select name="payment_{{ i }}_categoria">{% for c in categories %}<option {{ 'selected' if c=='Servicios' }}>{{ c }}</option>{% endfor %}</select></label><details><summary>Datos de tarjeta o préstamo</summary>{% for key,label in [('limite','Límite de tarjeta'),('disponible','Crédito disponible'),('minimo','Pago mínimo'),('saldo','Saldo del préstamo'),('restantes','Pagos restantes')] %}<label>{{ label }}<input type="number" min="0" step=".01" name="payment_{{ i }}_{{ key }}"></label>{% endfor %}</details></fieldset>{% endfor %}<button type="button" class="secondary" @click="payments=Math.min(20,payments+1)">＋ Agregar pago</button></section>
-<section x-show="step===5"><h2>Tu motivación (opcional)</h2><label>¿Para qué te gustaría ahorrar?<input name="motivation" value="{{ goal.get('motivacion','') }}"></label><label>Nombre de tu meta<input name="goal_name" value="{{ goal.get('nombre','') }}"></label><label>Monto que quieres alcanzar<input type="number" name="goal_amount" min="0" step=".01" value="{{ goal.get('montoObjetivo','') }}"></label><label>Fecha deseada<input type="date" name="goal_date" value="{{ goal.get('fechaObjetivo','') }}"></label><p>Summa calcula el aporte semanal con el monto que confirmes.</p></section>
-<section x-show="step===6"><h2>Conecta tu banco (opcional)</h2><p>Puedes conectarlo desde Perfil al terminar. Funciona también con efectivo.</p><button type="button" class="secondary" @click="step=7">Ahora no</button></section>
-<section x-show="step===7"><h2>Tú tienes el control</h2><p>Tus fotos y documentos no se almacenan.</p><label><input type="checkbox" name="privacy" value="1">Acepto el <a href="/privacidad">aviso de privacidad</a></label><label><input type="checkbox" name="ai_consent" {{ 'checked' if g.user.get('consentimientos',{}).get('iaDatos') }}>Permitir análisis con IA (opcional)</label><button>Guardar y empezar</button></section>
-<div class="row"><button type="button" class="secondary" x-show="step>1" @click="step--">Atrás</button><button type="button" x-show="step<7" @click="step++">Siguiente</button></div>
-</form></section>{% endblock %}{% block scripts %}<script src="/static/personalization.js"></script>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+    <section class="card form-card"
+             x-data="{step:1,count:{{ [members|length,1]|max }}}">
+        <img class="jami-art"
+             src="/static/img/jami-tareas.png"
+             alt="Jami te acompaña a crear tu hogar">
+        <h1>{{ 'Personalización' if g.hogar_id else 'Crea tu hogar' }}</h1>
+        <progress max="7"
+                  :value="step"
+                  value="1"
+                  aria-label="Avance de personalización"></progress>
+        <p>Paso <span x-text="step">1</span> de 7</p>
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+            <section x-show="step===1"><h2>Tu hogar</h2>{% if not g.hogar_id %}<label>Unirme con código<input name="code" maxlength="16" value="{{ request.args.get('code', '') }}"></label><p>O crea un hogar con tus datos:</p>{% endif %}
+                {% for key,label in [('nombre','Nombre de tu hogar'),('estado','Estado'),('municipio','Municipio'),('codigoPostal','Código postal (opcional)')] %}<label>{{ label }}<input name="{{ key }}" value="{{ household.get(key,'') }}" maxlength="100"></label>{% endfor %}
+                <label>
+                    <input type="checkbox"
+                           name="location_consent"
+                           id="location-consent"
+                           {{ 'checked' if household.ubicacion }}>Permitir ubicación para buscar supermercados cercanos (opcional)</label><button type="button" class="secondary" id="locate">Usar mi ubicación</button>
+                <p id="location-status" role="status">Si no la compartes, usaremos tu municipio.</p>
+                <input type="hidden"
+                       id="lat"
+                       name="lat"
+                       value="{{ household.get('ubicacion', {}).get('lat','') }}"><input type="hidden"
+       id="lng"
+       name="lng"
+       value="{{ household.get('ubicacion', {}).get('lng','') }}">
+            </section>
+            <section x-show="step===2">
+                <h2>¿Quiénes viven aquí?</h2>
+                {% for i in range(20) %}{% set m = members[i] if i<members|length else {} %}<fieldset x-show="count>{{ i }}" :disabled="count<={{ i }}"><legend>Persona {{ i+1 }}</legend><input type="hidden" name="member_{{ i }}_id" value="{{ m.get('id', '') }}">
+                {% for key,label,type in [('nombre','Nombre','text'),('edad','Edad','number'),('parentesco','Parentesco','text'),('ocupacion','Ocupación','text')] %}<label>{{ label }}<input name="member_{{ i }}_{{ key }}"
+       type="{{ type }}"
+       value="{{ m.get(key,g.user.nombre if key=='nombre' and i==0 else '') }}"
+       {% if key=='edad' %}min="0" max="120"{% endif %}></label>{% endfor %}
+                <label>Escolaridad<select name="member_{{ i }}_escolaridad">{% for level in ['ninguna','primaria','secundaria','preparatoria','universidad','posgrado'] %}<option {{ 'selected' if m.escolaridad==level }}>{{ level }}</option>{% endfor %}</select></label>
+                <label>
+                    <input type="checkbox"
+                           name="member_{{ i }}_estudiaActualmente"
+                           {{ 'checked' if m.estudiaActualmente }}>Estudia actualmente</label><label>Nivel que estudia<input name="member_{{ i }}_nivelQueEstudia"
+       value="{{ m.get('nivelQueEstudia', '') }}">
+                    </label>
+                    <label>Tipo de empleo<select name="member_{{ i }}_tipoEmpleo">{% for job in ['formal','informal','independiente','hogar','estudiante','jubilado','desempleado'] %}<option {{ 'selected' if m.tipoEmpleo==job }}>{{ job }}</option>{% endfor %}</select></label></fieldset>{% endfor %}<button type="button" class="secondary" @click="count=Math.min(20,count+1)">＋ Agregar persona</button></section>
+            <section x-show="step===3"><h2>Ingresos por persona</h2><p>Si todavía no conoces el monto, déjalo vacío.</p>{% for i in range(20) %}{% set m = members[i] if i<members|length else {} %}<fieldset x-show="count>{{ i }}" :disabled="count<={{ i }}"><legend>Persona {{ i+1 }} · {{ m.get('nombre', '') }}</legend><label>Ingreso<input type="number"
+       min="0"
+       step=".01"
+       name="member_{{ i }}_ingreso"
+       value="{{ m.get('ingreso', '') }}"></label><label>Periodicidad<select name="member_{{ i }}_periodicidadIngreso">{% for cadence in ['semanal','quincenal','mensual','variable'] %}<option {{ 'selected' if m.periodicidadIngreso==cadence }}>{{ cadence }}</option>{% endfor %}</select></label><label>Próxima fecha de cobro<input type="date"
+       name="member_{{ i }}_proximaFechaIngreso"
+       value="{{ m.get('proximaFechaIngreso', '') }}"></label></fieldset>{% endfor %}</section>
+            <section x-show="step===4" x-data="{payments:0}"><h2>Pagos habituales</h2>{% if g.hogar_id %}<a href="/perfil/personalizacion/pagos">Editar pagos existentes</a>{% endif %}<p>Agrega solo los pagos que tienes. El monto de tarjeta es el pago para no generar intereses.</p>
+                <datalist id="payment-names">
+                    {% for name in payment_templates %}<option value="{{ name }}">{% endfor %}
+                </datalist>
+            {% for i in range(20) %}<fieldset x-show="payments>{{ i }}" :disabled="payments<={{ i }}"><legend>Nuevo pago {{ i+1 }}</legend><label>Nombre<input name="payment_{{ i }}_nombre" list="payment-names"></label><label>Monto<input name="payment_{{ i }}_monto" type="number" min="0" step=".01"></label><label>Próximo vencimiento<input name="payment_{{ i }}_fecha" type="date"></label><label>Periodicidad<select name="payment_{{ i }}_periodicidad">{% for c in ['mensual','quincenal','semanal','bimestral'] %}<option>{{ c }}</option>{% endfor %}</select></label><label>Tipo<select name="payment_{{ i }}_tipo">{% for c in ['servicio','suscripcion','renta_colegiatura','credito','tarjeta_credito','otro'] %}<option>{{ c }}</option>{% endfor %}</select></label><label>Categoría<select name="payment_{{ i }}_categoria">{% for c in categories %}<option {{ 'selected' if c=='Servicios' }}>{{ c }}</option>{% endfor %}</select></label><details><summary>Datos de tarjeta o préstamo</summary>{% for key,label in [('limite','Límite de tarjeta'),('disponible','Crédito disponible'),('minimo','Pago mínimo'),('saldo','Saldo del préstamo'),('restantes','Pagos restantes')] %}<label>{{ label }}<input type="number" min="0" step=".01" name="payment_{{ i }}_{{ key }}"></label>{% endfor %}</details></fieldset>{% endfor %}<button type="button"
+        class="secondary"
+        @click="payments=Math.min(20,payments+1)">＋ Agregar pago</button></section>
+            <section x-show="step===5">
+                <h2>Tu motivación (opcional)</h2>
+                <label>
+                    ¿Para qué te gustaría ahorrar?<input name="motivation" value="{{ goal.get('motivacion', '') }}"></label><label>Nombre de tu meta<input name="goal_name" value="{{ goal.get('nombre', '') }}"></label><label>Monto que quieres alcanzar<input type="number"
+       name="goal_amount"
+       min="0"
+       step=".01"
+       value="{{ goal.get('montoObjetivo', '') }}"></label><label>Fecha deseada<input type="date"
+       name="goal_date"
+       value="{{ goal.get('fechaObjetivo', '') }}">
+                    </label>
+                    <p>Summa calcula el aporte semanal con el monto que confirmes.</p>
+                </section>
+                <section x-show="step===6">
+                    <h2>Conecta tu banco (opcional)</h2>
+                    <p>Puedes conectarlo desde Perfil al terminar. Funciona también con efectivo.</p>
+                    <button type="button" class="secondary" @click="step=7">Ahora no</button>
+                </section>
+                <section x-show="step===7">
+                    <h2>Tú tienes el control</h2>
+                    <p>Tus fotos y documentos no se almacenan.</p>
+                    <label>
+                        <input type="checkbox" name="privacy" value="1">Acepto el <a href="/privacidad">aviso de privacidad</a></label><label><input type="checkbox"
+       name="ai_consent"
+       {{ 'checked' if g.user.get('consentimientos', {}).get('iaDatos') }}>Permitir análisis con IA (opcional)</label><button>Guardar y empezar</button>
+                </section>
+                <div class="row">
+                    <button type="button"
+                            class="secondary"
+                            x-show="step>1"
+                            @click="step--">Atrás</button><button type="button" x-show="step<7" @click="step++">Siguiente</button>
+                </div>
+            </form>
+        </section>
+    {% endblock %}
+    {% block scripts %}<script src="/static/personalization.js"></script>{% endblock %}

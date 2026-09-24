@@ -22,6 +22,12 @@ def seed_demo(repository, email, reset=False):
             raise ValueError("Esta cuenta pertenece a un hogar real; usa una cuenta aparte.")
         if not reset:
             return uid, previous["hogarId"]
+        connections = repository.list(f"hogares/{previous['hogarId']}/conexiones")
+        if connections:
+            raise ValueError("Desconecta los bancos del hogar de ensayo antes de restablecerlo.")
+        members = repository.list(f"hogares/{previous['hogarId']}/integrantes")
+        if any(m["id"] != uid and repository.get("usuarios/" + m["id"]) for m in members):
+            raise ValueError("El ensayo tiene otras cuentas vinculadas; no se restablecerá automáticamente.")
         # Delete only this demo household and all of its known collections.
         from .privacy import HOUSEHOLD_COLLECTIONS
 
@@ -52,4 +58,13 @@ def seed_demo(repository, email, reset=False):
             f"hogares/{hid}/integrantes/{uid}": member,
         }
     )
+    from .movements import save_movement
+
+    for payment in fixture.get("payments", []):
+        repository.add(
+            f"hogares/{hid}/pagosFijos",
+            dict(payment, proximaFecha=(local_today() + timedelta(days=3)).isoformat()),
+        )
+    for movement in fixture.get("movements", []):
+        save_movement(repository, hid, uid, dict(movement, fecha=local_today().isoformat()), deduplicate=True)
     return uid, hid

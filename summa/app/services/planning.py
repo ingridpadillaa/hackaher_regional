@@ -106,9 +106,13 @@ def refresh_plan(repository, hid):
         weekly_capacity = plan["aporteMeta"] * 12 / 52
         goal["aporteSugeridoSemanal"] = round(contribution, 2)
         goal["fechaRealista"] = (
-            (local_today() + timedelta(weeks=remaining / weekly_capacity)).isoformat()
+            (
+                local_today()
+                + timedelta(days=min((date.max - local_today()).days, remaining / weekly_capacity * 7))
+            ).isoformat()
             if weekly_capacity > 0 and contribution > weekly_capacity
             else None
         )
-        repository.put(base + "/metas/motivacion", goal)
+        if repository.get(base + "/metas/motivacion") != goal:
+            repository.put(base + "/metas/motivacion", goal)
     return plan

@@ -13,11 +13,11 @@
             <p>
                 Tu dinero, tus planes y los de tu familia.
                 <br>
-                Todo encuentra su lugar.
+                Organiza el dinero de tu hogar con ayuda de Jami.
             </p>
-            <div class="pig-art" aria-hidden="true">
-                ◕<span>✦</span>
-            </div>
+            <img class="jami-art"
+                 src="/static/img/jami-ideas.png"
+                 alt="Jami, tu asistente de Summa">
             <span class="badge">Funciona también con efectivo</span>
         </div>
         <section class="card">
@@ -31,7 +31,9 @@
                 <p>Desarrollo local · Tu cuenta comienza vacía.</p>
                 <form method="post" action="/auth/demo">
                     <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
-                    <label>Tu nombre<input name="name" required maxlength="80" autocomplete="given-name"></label>
+                    <label>
+                        Tu nombre<input name="name" required maxlength="80" autocomplete="given-name">
+                    </label>
                     <button>Crear mi hogar</button>
                 </form>
             {% else %}
@@ -52,6 +54,7 @@
                 </form>
                 <p id="auth-error" role="alert"></p>
             {% endif %}
+            <p>Al continuar aceptas los <a href="/terminos">Términos</a> y el <a href="/privacidad">Aviso de privacidad</a>.</p>
             <p class="muted">
                 Conectar tu banco es opcional.
                 <br>

@@ -21,3 +21,16 @@ Auditoría de datos retirados: `docs/AUDITORIA_DATOS.md`.
 `python -m pytest -q`. Las pruebas usan una base temporal y fixtures aislados; nunca la base real.
 
 Proveedor alternativo opcional: instala `openai`, configura `LLM_PROVIDER=openai`, `OPENAI_API_KEY` y `OPENAI_MODEL` compatible con visión y Structured Outputs. Extracción mediante Responses parse con Pydantic y store=false; referencia: https://developers.openai.com/api/docs/guides/structured-outputs . El chat con function calling utiliza Gemini.
+
+## Mantenimiento sin servicios Blaze
+Ejecuta desde este directorio con `flask --app app` seguido de:
+- `seed-demo --email CUENTA --confirm` (cuenta de ensayo aparte; `--reset` solo para esDemo).
+- `profeco-sync --file RUTA` (CSV, ZIP o XLSX oficial); sin `--file`, descubre el archivo anual en el portal PROFECO.
+- `sync-banks`, `provider-health`, `daily-alerts`, `evaluar-rachas`, `generar-recomendaciones`.
+Los jobs operativos tienen también `POST /jobs/NOMBRE` con `X-Cron-Secret`. El seed destructivo se mantiene exclusivamente como CLI con confirmación. No programes llamadas a jobs sin el secreto. Las tareas son repetibles y usan bloqueos persistidos.
+
+En Render usa el blueprint `summa/render.yaml` desde la raíz del repo y agrega credenciales como secretos del entorno. Su disco gratuito es efímero: la base de precios necesita recarga tras reinicios; Firestore conserva los datos de hogares. Para demo estable se recomienda ejecución local. No hay requisitos de Cloud Storage, Cloud Run, Scheduler ni Secret Manager.
+
+Configuración de supermercados: `data/supermercados.json` solo guarda destinos oficiales; no precios ni sucursales. La búsqueda Chedraui fue verificada. Para VTEX, completa SKU reales por producto; sin todos los SKU, el botón abre una búsqueda y permite copiar la lista. Compara solo con ≥70% de cobertura, marca los faltantes estimados y muestra hasta tres sucursales.
+
+Consulta `docs/ESTADO.md` para las verificaciones realizadas y las integraciones pendientes, y `docs/DEMO.md` para el recorrido. Para usar el adaptador alternativo OpenAI instala opcionalmente su SDK; no es necesario para el flujo Gemini.

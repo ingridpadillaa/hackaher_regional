@@ -2,7 +2,6 @@
 
 import os
 import sqlite3
-from pathlib import Path
 
 
 def check(app):
@@ -27,7 +26,9 @@ def check(app):
             issues.append("No se pudo leer Firestore. Revisa credenciales ADC y permisos.")
     else:
         issues.append("Firestore no está disponible: configura GOOGLE_APPLICATION_CREDENTIALS o ADC.")
-    path = Path(app.root_path).parent / "data/precios.db"
+    from .services.price_db import database_path
+
+    path = database_path(repository)
     latest = None
     if path.exists():
         try:
@@ -38,7 +39,16 @@ def check(app):
     else:
         issues.append("No hay precios PROFECO. Ejecuta flask profeco-sync --file RUTA.")
     app.extensions["health"] = dict(
-        ready=connected, local=app.config.get("LOCAL_MODE", False), issues=issues, profeco=latest
+        providers={
+            name: (repository.get("estadoProveedores/" + name) or {"estado": "sin configurar"})
+            for name in ("syncfy", "finerio", "simulated")
+        }
+        if connected
+        else {},
+        ready=connected,
+        local=app.config.get("LOCAL_MODE", False),
+        issues=issues,
+        profeco=latest,
     )
     for issue in issues:
         app.logger.warning(issue)

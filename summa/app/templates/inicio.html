@@ -13,52 +13,61 @@
     <div class="grid dashboard">
         <div class="stack">
             <section class="hero budget-hero">
-{% if budget.has_income %}<p>Hoy puedes gastar</p><div class="amount">{{ budget.daily|money }}</div><div class="row"><p>Ingreso del periodo<br><strong>{{ budget.income|money }}</strong></p><p>Disponible hasta {{ budget.end }}<br><strong>{{ budget.available|money }}</strong></p></div><progress max="{{ budget.income }}" value="{{ [budget.spent,budget.income]|min }}" aria-label="Ingreso gastado"></progress><details><summary>¿Cómo se calcula?</summary><p>Ingreso {{ budget.income|money }} − pagos pendientes {{ budget.committed|money }} − ahorro y temporadas {{ budget.reserved|money }} − gastos pagados {{ budget.spent|money }} = {{ budget.available|money }}.</p><p>Dividimos el disponible entre {{ budget.days }} días hasta el siguiente cobro. Las compras con crédito se consideran al pagar la tarjeta.</p></details>{% if budget.available<0 %}<p role="alert">Esta quincena vas {{ (-budget.available)|money }} por encima.</p>{% endif %}
-{% else %}<img class="jami-art" src="/static/img/jami-pensando.png" alt=""><h2>Completa tu personalización para calcular cuánto puedes gastar</h2><a class="button" href="/perfil/personalizacion">Completar</a>{% endif %}</section>
-            <section class="card">
-                <div class="row">
-                    <h2>Lo que viene</h2>
-                    <a href="/perfil/personalizacion/pagos" class="subtle">Ver todos ↗</a>
-                </div>
-                {% for payment in payments[:4] %}
-                    <div class="list-row">
-                        <span class="list-icon">{{ '▣' if payment.tipo=='tarjeta_credito' else '↻' }}</span>
-                        <div class="detail">
-                            <strong>{{ payment.nombre }}</strong>
-                            <p class="subtle">{{ payment.proximaFecha }}</p>
-                        </div>
-                        <strong>{{ payment.datosTarjeta.pagoSinIntereses|money if payment.datosTarjeta else payment.monto|money }}</strong>
+                {% if budget.has_income %}<p>Hoy puedes gastar</p><div class="amount">{{ budget.daily|money }}</div><div class="row"><p>Ingreso del periodo<br><strong>{{ budget.income|money }}</strong></p><p>Disponible hasta {{ budget.end }}<br><strong>{{ budget.available|money }}</strong></p></div><progress max="{{ budget.income }}"
+          value="{{ [budget.spent,budget.income]|min }}"
+          aria-label="Ingreso gastado"></progress><details><summary>¿Cómo se calcula?</summary><p>Ingreso {{ budget.income|money }} − pagos pendientes {{ budget.committed|money }} − ahorro y temporadas {{ budget.reserved|money }} − gastos pagados {{ budget.spent|money }} = {{ budget.available|money }}.</p><p>Dividimos el disponible entre {{ budget.days }} días hasta el siguiente cobro. Las compras con crédito se consideran al pagar la tarjeta.</p></details>{% if budget.available<0 %}<p role="alert">Esta quincena vas {{ (-budget.available)|money }} por encima.</p>{% endif %}
+            {% else %}<img class="jami-art" src="/static/img/jami-pensando.png" alt=""><h2>Completa tu personalización para calcular cuánto puedes gastar</h2><a class="button" href="/perfil/personalizacion">Completar</a>{% endif %}</section>
+        <section class="card">
+            <div class="row">
+                <h2>Lo que viene</h2>
+                <a href="/perfil/personalizacion/pagos" class="subtle">Ver todos ↗</a>
+            </div>
+            {% for payment in payments[:4] %}
+                <div class="list-row">
+                    <span class="list-icon">{{ '▣' if payment.tipo=='tarjeta_credito' else '↻' }}</span>
+                    <div class="detail">
+                        <strong>{{ payment.nombre }}</strong>
+                        <p class="subtle">{{ payment.proximaFecha }}</p>
                     </div>
-                {% else %}
-                    <p class="empty">Sin pagos próximos. Respira con calma.</p>
-                {% endfor %}
-            </section>
-        </div>
-        <div class="stack">
-<section class="card"><span class="eyebrow">TU PROGRESO</span><img class="jami-art" src="/static/img/jami-ahorro.png" alt="Jami cuida tu ahorro"><h2>🔥 {{ streak.get('diasActuales',0) }} días de ahorro</h2><form method="post" action="/progreso/cerrar-dia"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><button class="secondary">Ya registré todos mis gastos de hoy</button></form>{% if goal %}<h3>{{ goal.nombre }}</h3><p>{{ goal.ahorrado|money }} de {{ goal.montoObjetivo|money }}</p><progress max="{{ goal.montoObjetivo }}" value="{{ goal.ahorrado }}" aria-label="Avance de tu meta"></progress><form method="post" action="/progreso/aportar"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><label>Ahorro que ya apartaste<input type="number" min=".01" step=".01" name="amount" required></label><button class="secondary">Registrar aporte</button></form>{% if goal.fechaRealista %}<p>Con el ahorro sugerido, una fecha más realista sería {{ goal.fechaRealista }}.</p>{% endif %}{% if goal.aporteSugeridoSemanal %}<p>Aporte sugerido de esta semana: {{ goal.aporteSugeridoSemanal|money }}</p>{% endif %}{% else %}<p>Define tu meta y empieza tu racha.</p><a href="/perfil/personalizacion" class="button secondary">Crear meta</a>{% endif %}</section>
-<section class="card soft"><h2>Un consejo de Jami</h2><p>Registra tus gastos de hoy para mantener tu disponible al día.</p><a href="/movimientos/nuevo">Registrar gasto →</a></section>
-            {% if season %}
-                <a class="card soft" href="/calendario">
-                    <span class="eyebrow">UN PASITO ADELANTE</span>
-                    <h2>{{ season.nombre }}</h2>
-                    <p>Aparta <strong>{{ season.weekly|money }} por semana</strong> para llegar con calma.</p>
-                    <small>{{ season.source }} · {{ season.fechaInicio }} ↗</small>
-                </a>
-            {% endif %}
-        </div>
-    </div>
-    {% for alert in alerts[:4] %}
-        <div class="notice" style="margin-top:16px">✦ {{ alert.mensaje }}</div>
-    {% endfor %}
-    <section class="card section-title">
-        <h2>Pequeños pasos, grandes cambios</h2>
-        <ul class="checklist">
-            {% for label,done,href in checklist %}
-                <li>
-                    <a href="{{ href }}">{{ '✓' if done else '○' }} {{ label }} ↗</a>
-                </li>
+                    <strong>{{ payment.datosTarjeta.pagoSinIntereses|money if payment.datosTarjeta else payment.monto|money }}</strong>
+                </div>
+            {% else %}
+                <p class="empty">Sin pagos próximos. Respira con calma.</p>
             {% endfor %}
-        </ul>
-        <small>Los cálculos usan los movimientos que puedes ver. Los gastos privados de otras personas no se muestran.</small>
-    </section>
-{% if donation_prompt %}{% include 'donation.html' %}{% endif %}{% endblock %}
+        </section>
+    </div>
+    <div class="stack">
+        <section class="card"><span class="eyebrow">TU PROGRESO</span><img class="jami-art"
+     src="/static/img/jami-ahorro.png"
+     alt="Jami cuida tu ahorro"><h2>🔥 {{ streak.get('diasActuales', 0) }} días de ahorro</h2><form method="post" action="/progreso/cerrar-dia"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><button class="secondary">Ya registré todos mis gastos de hoy</button></form>{% if goal %}<h3>{{ goal.nombre }}</h3><p>{{ goal.ahorrado|money }} de {{ goal.montoObjetivo|money }}</p><progress max="{{ goal.montoObjetivo }}"
+          value="{{ goal.ahorrado }}"
+          aria-label="Avance de tu meta"></progress><form method="post" action="/progreso/aportar"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><label>Ahorro que ya apartaste<input type="number" min=".01" step=".01" name="amount" required></label><button class="secondary">Registrar aporte</button></form>{% if goal.fechaRealista %}<p>Con el ahorro sugerido, una fecha más realista sería {{ goal.fechaRealista }}.</p>{% endif %}{% if goal.aporteSugeridoSemanal %}<p>Aporte sugerido de esta semana: {{ goal.aporteSugeridoSemanal|money }}</p>{% endif %}{% else %}<p>Define tu meta y empieza tu racha.</p><a href="/perfil/personalizacion" class="button secondary">Crear meta</a>{% endif %}</section>
+        <section class="card soft"><h2>Un consejo de Jami</h2>{% for item in recommendation %}<p>{{ item.detalle }}</p><a href="{{ item.ruta }}">Ver →</a>{% else %}<p>Registra tus gastos de hoy para mantener tu disponible al día.</p><a href="/movimientos/nuevo">Registrar gasto →</a>{% endfor %}</section>
+        {% if season %}
+            <a class="card soft" href="/calendario">
+                <span class="eyebrow">UN PASITO ADELANTE</span>
+                <h2>{{ season.nombre }}</h2>
+                <p>Aparta <strong>{{ season.weekly|money }} por semana</strong> para llegar con calma.</p>
+                <small>{{ season.source }} · {{ season.fechaInicio }} ↗</small>
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% for alert in alerts[:4] %}
+    <div class="notice" style="margin-top:16px">✦ {{ alert.mensaje }}</div>
+{% endfor %}
+<section class="card section-title">
+    <h2>Pequeños pasos, grandes cambios</h2>
+    <ul class="checklist">
+        {% for label,done,href in checklist %}
+            <li>
+                <a href="{{ href }}">{{ '✓' if done else '○' }} {{ label }} ↗</a>
+            </li>
+        {% endfor %}
+    </ul>
+    <small>Los cálculos usan los movimientos que puedes ver. Los gastos privados de otras personas no se muestran.</small>
+</section>
+{% if donation_prompt and budget.available>=0 %}
+    {% include "donation.html" %}
+{% endif %}
+{% endblock %}

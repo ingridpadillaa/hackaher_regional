@@ -58,6 +58,9 @@ def index():
         household=household,
         goal=repo().get(base + "/metas/motivacion") or {},
         streak=repo().get(base + "/racha/estado") or {},
+        recommendation=(repo().get(base + "/recomendaciones/" + local_today().isoformat()) or {}).get(
+            "items", []
+        )[:1],
         budget=budget,
         score=health_score(household, movements, payments),
         payments=next_payments,

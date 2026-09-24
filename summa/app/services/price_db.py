@@ -5,7 +5,7 @@ COLUMNS = "producto_id producto presentacion marca categoria cadena tienda direc
 
 
 def database_path(repository=None):
-    if repository and not repository.remote:
+    if repository and repository.testing:
         return Path(repository.path).parent / "precios.db"
     return Path(__file__).resolve().parents[2] / "data/precios.db"
 
@@ -29,7 +29,9 @@ def connect(repository=None):
 def prices(repository, query=None):
     if not database_path(repository).exists():
         return []
-    with connect(repository) as db:
+    from contextlib import closing
+
+    with closing(connect(repository)) as db:
         if query:
             rows = db.execute(
                 "SELECT * FROM precios_profeco WHERE producto LIKE ? LIMIT 50", ("%" + query + "%",)

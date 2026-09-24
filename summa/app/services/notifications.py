@@ -20,13 +20,15 @@ def notify(repository, hid, kind, title, message, route="/", severity="info", ke
         route = "/"
     base = f"hogares/{hid}/notificaciones"
     today = local_today().isoformat()
-    existing = repository.list(base)
     key = key or hashlib.sha256((kind + title + today).encode()).hexdigest()
-    if repository.get(base + "/" + key) or sum(n.get("creadaEn", "")[:10] == today for n in existing) >= 3:
-        return False
-    repository.put(
-        base + "/" + key,
-        dict(
+    path = base + "/" + key
+    quota = f"hogares/{hid}/limitesNotificaciones/{today}"
+
+    def write(current):
+        count = (current[quota] or {}).get("cantidad", 0)
+        if current[path] or count >= 3:
+            return {}, False
+        value = dict(
             tipo=kind,
             titulo=title,
             mensaje=message,
@@ -34,9 +36,10 @@ def notify(repository, hid, kind, title, message, route="/", severity="info", ke
             accion={"ruta": route},
             leida=False,
             creadaEn=today,
-        ),
-    )
-    return True
+        )
+        return {path: value, quota: {"cantidad": count + 1}}, True
+
+    return repository.atomic([path, quota], write)
 
 
 def refresh(repository, hid):

@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: summa
+    runtime: python
+    rootDir: summa
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn 'app:create_app()' --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: LOCAL_MODE
+        value: "false"
+      - key: DEMO_MODE
+        value: "false"
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_WEB_CONFIG
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false

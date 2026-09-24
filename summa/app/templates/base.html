@@ -3,30 +3,33 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
-        <meta name="theme-color" content="#F26B3A">
+        <meta name="theme-color" content="#EC3A6A">
         <meta name="csrf-token" content="{{ g.csrf_token }}">
         <title>{% block title %}Summa · Tu dinero, con calma{% endblock %}</title>
         <link rel="manifest" href="/static/manifest.json">
-        <link rel="icon" href="/static/icon.svg">
+        <link rel="icon" href="/static/img/jami-avatar.png">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
               rel="stylesheet">
         <script src="https://cdn.tailwindcss.com/3.4.17"></script>
         <script src="/static/tailwind-config.js"></script>
         <link rel="stylesheet" href="/static/app.css">
-        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
+        <script defer
+                src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
         <script defer src="/static/app.js"></script>
         {% block head %}{% endblock %}
     </head>
     <body data-user="{{ g.user.uid if g.user else '' }}">
         <div class="shell">
             <header>
-                <a class="brand" href="/">◕ <span>summa</span>
+                <a class="brand" href="/"><span>Summa</span>
                     <small>tu dinero, con calma</small>
                 </a>
                 {% if g.user %}
                     <a class="icon-btn" href="/calendario" aria-label="Calendario">▦</a>
-                    <a class="icon-btn" href="/notificaciones" aria-label="Notificaciones">♧ {{ unread_notifications or '' }}</a><span class="avatar">{{ g.user.nombre[:1] }}</span>
+                    <a class="icon-btn"
+                       href="/notificaciones"
+                       aria-label="Notificaciones">♧ {{ unread_notifications or '' }}</a><span class="avatar">{{ g.user.nombre[:1] }}</span>
                 {% endif %}
             </header>
             {% if demo_mode %}
@@ -48,7 +51,9 @@
                 </nav>
                 <button class="copilot-launch"
                         aria-label="Abrir Jami"
-                        onclick="document.getElementById('copilot').showModal()"><img src="/static/img/jami-avatar.png" width="44" height="44" alt="Jami"></button>
+                        onclick="document.getElementById('copilot').showModal()">
+                    <img src="/static/img/jami-avatar.png" width="44" height="44" alt="Jami">
+                </button>
                 <dialog id="copilot">
                     <div class="row">
                         <h2>Jami</h2>

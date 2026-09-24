@@ -1,1 +1,4 @@
-{% if donation_url and not g.user.get('ocultarDonativos') %}<section class="card"><h2>Apoya a Summa</h2><p>Si Summa te ha sido útil, puedes apoyar su desarrollo. Es completamente opcional.</p><a class="button secondary" href="{{ donation_url }}" target="_blank" rel="noopener noreferrer">Apoyar en sitio externo</a><form method="post" action="/perfil/donativos/ocultar"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><button class="secondary">No volver a mostrar</button></form></section>{% endif %}
+{% if donation_url and not g.user.get("ocultarDonativos") %}<section class="card"><h2>Apoya a Summa</h2><p>Si Summa te ha sido útil, puedes apoyar su desarrollo. Es completamente opcional.</p><a class="button secondary"
+   href="{{ donation_url }}"
+   target="_blank"
+   rel="noopener noreferrer">Apoyar en sitio externo</a><form method="post" action="/perfil/donativos/ocultar"><input type="hidden" name="csrf_token" value="{{ g.csrf_token }}"><button class="secondary">No volver a mostrar</button></form></section>{% endif %}

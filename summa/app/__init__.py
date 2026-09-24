@@ -68,7 +68,7 @@ def create_app(test_config=None):
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=(self)"
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com; frame-src https://*.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'"
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com; frame-src https://*.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self' https://www.chedraui.com.mx"
         )
 
         if not request.path.startswith("/static/"):
@@ -160,5 +160,22 @@ def create_app(test_config=None):
             click.echo(f"Hogar de ensayo creado: {hid}. Cuenta: {uid}. Sin precios ni tiendas.")
         except ValueError as error:
             raise click.ClickException(str(error))
+
+    def register_job(name):
+        @app.cli.command(name)
+        def command():
+            from .jobs import run
+
+            result = run(name)
+            click.echo(result)
+
+    for job_name in (
+        "sync-banks",
+        "provider-health",
+        "daily-alerts",
+        "evaluar-rachas",
+        "generar-recomendaciones",
+    ):
+        register_job(job_name)
 
     return app
