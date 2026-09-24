@@ -1,0 +1,16 @@
+{
+  "project": "hackaher",
+  "home": "Hack",
+  "accounts": [
+    {
+      "uid": "demo-hack-rosy",
+      "email": "rosy.hack.demo@example.test",
+      "password": "w1Ml6OXryL8WrMEHJGQKlv-L1EAKggCu"
+    },
+    {
+      "uid": "demo-hack-vane",
+      "email": "vane.hack.demo@example.test",
+      "password": "JZAY60vQUcNedqIIM_dOiDS3ArZJukuo"
+    }
+  ]
+}
