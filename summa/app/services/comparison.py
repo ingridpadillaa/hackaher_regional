@@ -20,7 +20,7 @@ def haversine(a, b):
 
 def buy_url(chain, items):
     configs = json.loads((Path(__file__).resolve().parents[2] / "data/supermercados.json").read_text())
-    config = next((v for k,v in configs.items() if normalize(k)==normalize(chain)),None)
+    config = next((v for k, v in configs.items() if normalize(k) == normalize(chain)), None)
     if not config:
         return None
     domain = config["dominio"]

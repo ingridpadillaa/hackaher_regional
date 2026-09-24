@@ -44,4 +44,8 @@ def upcoming(events, household, movements, today=None):
         estimate(e, household, movements, today)
         for e in sorted(events, key=lambda e: e["fechaInicio"])
         if e["fechaFin"] >= today.isoformat()
+        and (
+            "clases" not in e["nombre"].lower()
+            or household.get("tipoHogar") in (None, "familia_con_hijos_escolares", "estudiantes")
+        )
     ]

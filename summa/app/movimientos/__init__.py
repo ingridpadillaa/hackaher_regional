@@ -325,6 +325,12 @@ def reports():
     window = request.args.get("periodo", "quincena")
     return render_template(
         "reports.html",
+        plan=__import__("app.services.planning", fromlist=["refresh_plan"]).refresh_plan(repo(), g.hogar_id),
+        recommendations=repo().get(
+            f"hogares/{g.hogar_id}/recomendaciones/"
+            + __import__("app.services.clock", fromlist=["local_today"]).local_today().isoformat()
+        )
+        or {"items": [], "status": "unavailable"},
         report=report(
             visible_movements(g.hogar_id, g.user["uid"]), repo().list(f"hogares/{g.hogar_id}/tickets"), window
         ),

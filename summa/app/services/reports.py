@@ -60,7 +60,24 @@ def report(movements, tickets, window, today=None):
         history.sort()
         if len(history) > 1 and history[0][1] > 0:
             changes.append((history[-1][1] / history[0][1] - 1) * 100)
+    from calendar import monthrange
+
+    from .planning import history_days
+
+    recorded = history_days(movements, today)
+    trailing = summarize(movements, (end - timedelta(days=30)).isoformat(), end.isoformat())["expenses"]
+    next_month = (today.replace(day=28) + timedelta(days=4)).replace(day=1)
+    projection = (
+        dict(
+            restoMes=round(trailing / 30 * (monthrange(today.year, today.month)[1] - today.day), 2),
+            proximoMes=round(trailing / 30 * monthrange(next_month.year, next_month.month)[1], 2),
+        )
+        if recorded >= 30
+        else None
+    )
     return dict(
+        recorded_days=recorded,
+        projection=projection,
         current=current,
         previous=previous,
         periods=list(reversed(periods)),
