@@ -29,6 +29,7 @@ export function MovementModal({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [analysisWarning, setAnalysisWarning] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [transcript, setTranscript] = useState("");
   const [recording, setRecording] = useState(false);
@@ -72,6 +73,7 @@ export function MovementModal({
     setFile(null);
     setDrafts([]);
     setTranscript("");
+    setAnalysisWarning("");
     setError("");
   }
   async function startCamera() {
@@ -149,7 +151,8 @@ export function MovementModal({
     }
   }
   function selectFile(f: File | undefined) {
-    if (!f) return;
+    if (!f || busy) return;
+    setAnalysisWarning("");
     if (f.size > 10 * 1024 * 1024) {
       setError("El archivo debe pesar como máximo 10 MB.");
       return;
@@ -159,6 +162,7 @@ export function MovementModal({
     setError("");
   }
   async function analyze(textOnly = false) {
+    setAnalysisWarning("");
     setBusy(true);
     setError("");
     try {
@@ -176,6 +180,7 @@ export function MovementModal({
       const result = await call("analyze", payload);
       setTranscript(result.transcript || transcript);
       setDraftId(result.draftId);
+      setAnalysisWarning(result.warning || "");
       setDrafts(
         result.movements.map((m: Movement, i: number) => ({
           ...m,
@@ -339,6 +344,7 @@ export function MovementModal({
                   <span>Estado de cuenta o comprobante · Máx. 10 MB</span>
                   <input
                     type="file"
+                    disabled={busy}
                     accept="application/pdf"
                     onChange={(e) => selectFile(e.target.files?.[0])}
                   />
@@ -367,6 +373,7 @@ export function MovementModal({
                         O elige una foto del ticket
                         <input
                           type="file"
+                          disabled={busy}
                           accept="image/jpeg,image/png,image/webp"
                           capture="environment"
                           onChange={(e) => selectFile(e.target.files?.[0])}
@@ -405,10 +412,12 @@ export function MovementModal({
                   <Field label="Transcripción editable">
                     <textarea
                       value={transcript}
+                      disabled={busy}
                       maxLength={10000}
                       onChange={(e) => {
                         setTranscript(e.target.value);
                         setDrafts([]);
+                        setAnalysisWarning("");
                       }}
                       placeholder="Aquí aparecerá lo que dijiste; también puedes escribirlo."
                     />
@@ -441,23 +450,59 @@ export function MovementModal({
             {drafts.length > 0 && (
               <section className="analysis-result">
                 <h3>Revisa antes de guardar</h3>
+                <p className="helper">
+                  Gemini sugirió estas categorías. Puedes cambiarlas o descartar
+                  movimientos; solo se guardan cuando confirmas.
+                </p>
                 {drafts.map((m, i) => (
                   <div className="draft-row" key={i}>
-                    <span className="badge">
-                      <CategoryIcon name={m.category} />
-                      {m.category}
-                    </span>
+                    <Field label={`Categoría sugerida del movimiento ${i + 1}`}>
+                      <select
+                        value={m.category}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setDrafts((current) =>
+                            current.map((draft, index) =>
+                              index === i
+                                ? { ...draft, category: e.target.value }
+                                : draft,
+                            ),
+                          )
+                        }
+                      >
+                        {categories.map((value) => (
+                          <option key={value}>{value}</option>
+                        ))}
+                      </select>
+                    </Field>
                     <strong>
                       {m.type === "ingreso" ? "+" : "−"}
                       {money(m.amount)}
                     </strong>
                     <span>{m.note}</span>
                     <small>{m.date}</small>
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() =>
+                        setDrafts((current) =>
+                          current.filter((_, index) => index !== i),
+                        )
+                      }
+                    >
+                      Descartar movimiento {i + 1}
+                    </button>
                   </div>
                 ))}
               </section>
             )}
           </>
+        )}
+        {analysisWarning && (
+          <p className="helper" role="status">
+            {analysisWarning}
+          </p>
         )}
         <ErrorText text={error} />
         <Button
