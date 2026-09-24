@@ -231,3 +231,12 @@ def edit_profile():
     repo().put(path, member)
     flash("Perfil actualizado.")
     return redirect("/perfil")
+
+
+@bp.post("/perfil/donativos/ocultar")
+@login_required
+def dismiss_donation():
+    user = repo().get(f"usuarios/{g.user['uid']}")
+    user["ocultarDonativos"] = True
+    repo().put(f"usuarios/{g.user['uid']}", user)
+    return redirect("/perfil")

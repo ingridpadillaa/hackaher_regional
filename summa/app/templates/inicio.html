@@ -61,4 +61,4 @@
         </ul>
         <small>Los cálculos usan los movimientos que puedes ver. Los gastos privados de otras personas no se muestran.</small>
     </section>
-{% endblock %}
+{% if donation_prompt %}{% include 'donation.html' %}{% endif %}{% endblock %}

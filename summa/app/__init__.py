@@ -79,6 +79,8 @@ def create_app(test_config=None):
 
     @app.context_processor
     def context():
+        from .services.donations import donation_url
+
         unread = 0
         if getattr(g, "hogar_id", None):
             unread = sum(
@@ -87,6 +89,7 @@ def create_app(test_config=None):
             )
         return dict(
             unread_notifications=unread,
+            donation_url=donation_url(),
             local_mode=app.config.get("LOCAL_MODE") or app.config.get("TESTING"),
             demo_mode=app.config["DEMO_MODE"],
             today=local_today().isoformat(),

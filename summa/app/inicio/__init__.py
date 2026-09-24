@@ -52,6 +52,9 @@ def index():
     )
     return render_template(
         "inicio.html",
+        donation_prompt=__import__("app.services.donations", fromlist=["eligible"]).eligible(
+            repo(), g.hogar_id, g.user
+        ),
         household=household,
         goal=repo().get(base + "/metas/motivacion") or {},
         streak=repo().get(base + "/racha/estado") or {},
