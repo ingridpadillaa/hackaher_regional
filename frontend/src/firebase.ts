@@ -1,3 +1,4 @@
+import { interfaceText, presentResponse } from "./presentation";
 import { initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 import {
@@ -35,7 +36,7 @@ export async function call<T = any>(
     action,
     payload,
   });
-  return result.data as T;
+  return presentResponse(result.data as T);
 }
 export function errorMessage(e: unknown) {
   const code = (e as any)?.code ?? "";
@@ -53,7 +54,7 @@ export function errorMessage(e: unknown) {
     "functions/unavailable":
       "No pudimos conectar. Revisa tu conexión e intenta de nuevo.",
   };
-  return (
+  return interfaceText(
     messages[code] ??
     (e instanceof Error ? e.message : "No pudimos completar la operación.")
   );

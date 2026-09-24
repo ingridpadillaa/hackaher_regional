@@ -265,7 +265,7 @@ export async function privateBankAction(
     !["bankDisconnect", "bankEraseImports"].includes(action)
   )
     throw fail(
-      "Usa una cuenta personal y un hogar privado; no conectes tu banco real al hogar de demostración.",
+      "Usa una cuenta personal y un hogar privado; no conectes tu banco real al hogar de prueba.",
     );
   if (
     mode === "live" &&
@@ -468,7 +468,7 @@ export async function privateBankAction(
     if (action === "bankImport") {
       if (mode === "sandbox" && !homeData.esDemo)
         throw fail(
-          "Los movimientos ficticios solo se importan en hogares de demostración.",
+          "Los movimientos ficticios solo se importan en hogares de prueba.",
         );
       const input = z
         .object({
