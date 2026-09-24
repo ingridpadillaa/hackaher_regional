@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 export function Logo({ small = false }: { small?: boolean }) {
   return (
-    <span
-      role="img"
-      aria-label="Summa"
+    <img
+      src="/images/summa-logo.png"
+      alt="Summa"
       className={small ? "logo small" : "logo"}
     />
   );

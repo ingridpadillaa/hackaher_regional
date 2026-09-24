@@ -2,7 +2,7 @@
 :root {
   font-family: "Nunito", sans-serif;
   color: #30303d;
-  background: #fffcf8;
+  background: #fcf2e7;
   font-synthesis: none;
   font-weight: 500;
   --pink: #f52f69;
@@ -16,6 +16,7 @@
 }
 body {
   margin: 0;
+  background: var(--cream);
 }
 button,
 input,
@@ -127,33 +128,29 @@ form {
 .page {
   width: 100%;
   max-width: 570px;
+  min-height: 100dvh;
   margin: auto;
   padding: 18px 22px 36px;
+  background: var(--cream);
 }
 .app-shell {
   max-width: 640px;
   margin: auto;
   min-height: 100dvh;
-  background: #fffdfa;
+  background: var(--cream);
   padding-bottom: 100px;
   box-shadow: 0 0 80px #9d6c4110;
 }
 .logo {
   display: block;
-  width: 88px;
-  height: 91px;
+  width: 112px;
+  height: 112px;
   margin: 0 auto 10px;
-  background-image: url("/images/reference-welcome.jpg");
-  background-size: 290px auto;
-  background-position: -100px -20px;
-  background-repeat: no-repeat;
-  mix-blend-mode: multiply;
+  object-fit: contain;
 }
 .logo.small {
-  width: 44px;
-  height: 46px;
-  background-size: 145px auto;
-  background-position: -50px -10px;
+  width: 58px;
+  height: 58px;
   margin: 0;
 }
 .app-header {
@@ -166,13 +163,6 @@ form {
   display: flex;
   align-items: center;
   text-decoration: none;
-}
-.app-header > a:first-child:after {
-  content: "SUMMA";
-  font-weight: 1000;
-  font-size: 23px;
-  color: var(--pink);
-  letter-spacing: -1px;
 }
 .household-label {
   margin-left: auto;
@@ -481,9 +471,7 @@ form {
 }
 .onboarding,
 .profile-page {
-  background:
-    radial-gradient(ellipse at 105% 200px, #fbe6df 0, transparent 40%),
-    linear-gradient(#fffcf8 100px, #fcf0e2);
+  background: var(--cream);
   border-radius: 25px;
 }
 .onboarding > .logo,
