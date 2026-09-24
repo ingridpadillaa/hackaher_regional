@@ -4,7 +4,7 @@ Plataforma del hogar con **React + Vite + TypeScript + Tailwind CSS**, conectada
 
 ## Estado
 
-La aplicación React está implementada en `web/` y el backend TypeScript en `functions/`. Compila y su recorrido principal se probó en Chrome móvil con Firebase Emulator Suite. El despliegue a `hackaher` **no se ejecutó: el permiso para publicar fue rechazado**. La versión Python permanece en `app/` como referencia histórica; no participa en el build de React.
+La aplicación React está implementada en `frontend/` y el backend TypeScript en `backend/functions/`. Compila y su recorrido principal se probó en Chrome móvil con Firebase Emulator Suite. El despliegue a `hackaher` **no se ejecutó: el permiso para publicar fue rechazado**. La versión Python permanece en `backend/app/` como referencia histórica; no participa en el build de React.
 
 ## Cuatro módulos
 
@@ -26,7 +26,7 @@ Las cifras y personas de las diapositivas son ejemplos visuales y no se cargan c
 - Proyecto: **`hackaher`**, plan **Blaze**.
 - Firestore: **`(default)`**, ubicación **`nam5`**, verificada.
 - Functions: segunda generación, Node.js 22, región `us-central1`, máximo 3 instancias.
-- Hosting: `web/dist`, HTTPS y reescritura de rutas a `index.html`.
+- Hosting: `frontend/dist`, HTTPS y reescritura de rutas a `index.html`.
 - Authentication: correo/contraseña habilitado; dominios `localhost`, `hackaher.web.app` y `hackaher.firebaseapp.com` verificados. El botón Google requiere que el proveedor Google también esté habilitado; ese flujo no se ha probado con una cuenta real.
 - Se habilitó Secret Manager y se guardó la llave sandbox de Syncfy en `SUMMA_INTEGRATIONS`.
 
@@ -38,27 +38,27 @@ El nuevo esquema comparte `usuarios` y `hogares`, con subcolecciones `members`, 
 
 Requisitos: Node.js 22, npm, Firebase CLI y Java compatible con el emulador Firestore. En esta computadora las pruebas se ejecutaron con Node.js 24; el runtime de despliegue está fijado a 22.
 
-Desde `summa/`:
+Desde la raíz del repositorio:
 
 ```sh
-npm install
-cp web/.env.example web/.env.local
+npm ci
+cp frontend/.env.example frontend/.env.local
 ```
 
-Completa en `web/.env.local` la configuración pública de la app web Firebase. **No agregues secretos a variables `VITE_*`: se incluyen en el navegador.** La configuración pública local de `hackaher` ya se descargó durante la preparación y no se versiona.
+Completa en `frontend/.env.local` la configuración pública de la app web Firebase. **No agregues secretos a variables `VITE_*`: se incluyen en el navegador.** La configuración pública local de `hackaher` ya se descargó durante la preparación y no se versiona.
 
 Para trabajar con datos aislados, en dos terminales:
 
 ```sh
-npm run build --workspace functions
+npm run build --workspace backend/functions
 npm run emulators
 ```
 
 ```sh
-VITE_USE_EMULATORS=true npm run dev --workspace web -- --port 5173
+VITE_USE_EMULATORS=true npm run dev --workspace frontend -- --port 5173
 ```
 
-Abre `http://127.0.0.1:5173`. Los emuladores usan el proyecto ficticio `demo-summa`: Auth en 9099, Firestore en 8085, Functions en 5001 y consola local en 4000. Para pruebas sin proveedores externos, `functions/.secret.local` debe contener `SUMMA_INTEGRATIONS={}`. Este archivo está ignorado por Git. La prueba explícita de Syncfy requiere el secreto sandbox local.
+Abre `http://127.0.0.1:5173`. Los emuladores usan el proyecto ficticio `demo-summa`: Auth en 9099, Firestore en 8085, Functions en 5001 y consola local en 4000. Para pruebas sin proveedores externos, `backend/functions/.secret.local` debe contener `SUMMA_INTEGRATIONS={}`. Este archivo está ignorado por Git. La prueba explícita de Syncfy requiere el secreto sandbox local.
 
 ## Integraciones y límites actuales
 
@@ -91,17 +91,17 @@ Se incluyen fechas mexicanas fijas (Reyes, Día del Niño, Día de las Madres, F
 ```sh
 npm test
 npm run test:integration
-node scripts/browser.mjs
+npm run test:browser
 npm run build
 ```
 
 `npm test` prueba cálculos y validación mediante el runner de Node. Integración necesita los emuladores activos. La prueba de navegador necesita Vite en modo emulador y Google Chrome; crea solo cuentas y datos locales de prueba. Comprueba el onboarding obligatorio, cuatro módulos, persistencia, simulación y el regreso a Inicio al iniciar sesión de nuevo. Las capturas quedan en `/tmp/summa-ui/`.
 
-La prueba bancaria explícita se ejecuta con `node scripts/bank-smoke.mjs`: además del entorno local, utiliza el sandbox de Syncfy. No forma parte de los tests automáticos ordinarios.
+La prueba bancaria explícita se ejecuta con `node backend/scripts/bank-smoke.mjs`: además del entorno local, utiliza el sandbox de Syncfy. No forma parte de los tests automáticos ordinarios.
 
 ## Publicación pendiente
 
-Cuando se autorice el despliegue, desde `summa/`:
+Cuando se autorice el despliegue, desde la raíz del repositorio:
 
 ```sh
 npm run deploy
@@ -123,6 +123,6 @@ No se ha ejecutado un despliegue exitoso ni una prueba pública. El primer despl
 
 ## Documentación y referencia anterior
 
-`app/`, sus pruebas Python y las guías `docs/CONEXIONES.md`, `docs/ESTADO.md` y `docs/DEMO.md` describen la versión Flask. No deben usarse como instrucciones del frontend React. Se conservan para consultar lógica que aún no se haya portado.
+`backend/app/`, sus pruebas Python y las guías `docs/CONEXIONES.md`, `docs/ESTADO.md` y `docs/DEMO.md` describen la versión Flask. No deben usarse como instrucciones del frontend React. Se conservan para consultar lógica que aún no se haya portado.
 
 Referencias: [Firebase Hosting](https://firebase.google.com/docs/hosting/), [funciones callable](https://firebase.google.com/docs/functions/callable), [secretos](https://firebase.google.com/docs/functions/config-env), [Syncfy REST](https://github.com/Paybook/sync-rest), [widget oficial](https://github.com/Paybook/sync-widget), [variables Vite](https://vite.dev/guide/env-and-mode).

@@ -1,8 +1,9 @@
 FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
+WORKDIR /app/backend
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
+COPY backend/ .
+COPY frontend/legacy/ /app/frontend/legacy/
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
 USER appuser
 ENV PORT=8080

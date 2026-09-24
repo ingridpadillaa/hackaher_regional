@@ -1,6 +1,6 @@
 # Firebase y Gemini: conexión y prueba local
 
-La app lee el `.env` existente en la raíz del repositorio, sin copiar sus valores a otros archivos. También admite la raíz de HackHerRegio y, como compatibilidad, `summa/.env`; solo se lee el primero encontrado. `ENV_FILE` permite indicar otra ruta. Las variables ya presentes en el proceso tienen prioridad. No pegues secretos en comandos ni los agregues a Git.
+La app lee el `.env` existente en la raíz del repositorio, sin copiar sus valores a otros archivos. También admite la raíz de HackHerRegio y, como compatibilidad, `backend/.env`; solo se lee el primero encontrado. `ENV_FILE` permite indicar otra ruta. Las variables ya presentes en el proceso tienen prioridad. No pegues secretos en comandos ni los agregues a Git.
 
 Firebase puede utilizar Blaze. El frontend carga únicamente Firebase Authentication modular desde gstatic; no se necesita `npm install firebase`, Analytics ni Storage para este flujo. Las fotos siguen procesándose en memoria.
 
@@ -30,7 +30,7 @@ Desde Terminal:
 ```sh
 cd /Users/rosyherrerat/Desktop/HackHerRegio/hackaher_regional
 source .venv/bin/activate
-cd summa
+cd backend
 python scripts/check_connections.py
 ```
 
@@ -42,7 +42,7 @@ ENV_FILE=/ruta/al/archivo/.env python scripts/check_connections.py
 
 El script imprime solo nombres y estados. Compara las variables con `.env.example`, crea/lee/borra `_healthcheck/prueba`, lista como máximo un usuario sin imprimirlo y envía a Gemini únicamente «responde OK». Si `_healthcheck/prueba` ya existe, no lo sobrescribe. Si no puede eliminar su propio documento, informa FALLA. La ausencia de SQLite genera AVISO y no bloquea las demás comprobaciones. Código de salida 0 significa que las comprobaciones obligatorias pasaron.
 
-Para reglas e índices, desde `summa/`, selecciona el proyecto correcto con Firebase CLI y ejecuta:
+Para reglas e índices, desde la raíz del repositorio (si estás en `backend/`, ejecuta `cd ..` primero), selecciona el proyecto correcto con Firebase CLI y ejecuta:
 
 ```sh
 firebase login

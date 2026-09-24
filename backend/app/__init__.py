@@ -1,5 +1,6 @@
 import hmac
 import importlib
+from pathlib import Path
 
 from flask import Flask, abort, g, render_template, request
 from itsdangerous import BadSignature, URLSafeTimedSerializer
@@ -11,7 +12,14 @@ from .services.firestore_repo import Repository
 
 
 def create_app(test_config=None):
-    app = Flask(__name__, instance_relative_config=True)
+    frontend_dir = Path(__file__).resolve().parents[2] / "frontend" / "legacy"
+    app = Flask(
+        __name__,
+        instance_relative_config=True,
+        template_folder=str(frontend_dir / "templates"),
+        static_folder=str(frontend_dir / "static"),
+        static_url_path="/static",
+    )
     app.config.update(settings(load_file=not (test_config or {}).get("TESTING")))
     if test_config:
         app.config.update(test_config)

@@ -7,7 +7,7 @@ instance/
 *.sqlite*
 .DS_Store
 service-account*.json
-summa/app/connectors/fixtures/recorded/
+backend/app/connectors/fixtures/recorded/
 
 *.db
 *service-account*.json
@@ -15,16 +15,16 @@ summa/app/connectors/fixtures/recorded/
 
 # JSON is private by default; allow only versioned application catalogs/config.
 *.json
-!/summa/app/connectors/fixtures/bank.json
-!/summa/app/static/manifest.json
-!/summa/data/categorias.json
-!/summa/data/demo.json
-!/summa/data/pagos.json
-!/summa/data/presupuesto_base.json
-!/summa/data/supermercados.json
-!/summa/data/temporadas.json
-!/summa/firebase.json
-!/summa/firestore.indexes.json
+!/backend/app/connectors/fixtures/bank.json
+!/frontend/legacy/static/manifest.json
+!/backend/data/categorias.json
+!/backend/data/demo.json
+!/backend/data/pagos.json
+!/backend/data/presupuesto_base.json
+!/backend/data/supermercados.json
+!/backend/data/temporadas.json
+!/firebase.json
+!/backend/firestore.indexes.json
 
 .env.*
 !.env.example
@@ -42,9 +42,11 @@ node_modules/
 **/*.tsbuildinfo
 **/.secret.local
 ui-debug.log
-!/summa/package.json
-!/summa/package-lock.json
-!/summa/web/package.json
-!/summa/web/tsconfig.json
-!/summa/functions/package.json
-!/summa/functions/tsconfig.json
+!/package.json
+!/package-lock.json
+!/frontend/package.json
+!/frontend/tsconfig.json
+!/backend/functions/package.json
+!/backend/functions/tsconfig.json
+
+.ruff_cache/

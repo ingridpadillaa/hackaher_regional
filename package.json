@@ -1,0 +1,21 @@
+{
+  "name": "summa",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend/functions"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace backend/functions && npm run build --workspace frontend",
+    "test": "npm run test --workspace backend/functions",
+    "test:integration": "node backend/scripts/integration.mjs",
+    "emulators": "firebase emulators:start --project demo-summa --only auth,firestore,functions",
+    "deploy": "npm run build && firebase deploy --project hackaher --only hosting,functions,firestore:rules,firestore:indexes",
+    "test:browser": "node frontend/scripts/browser.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "prettier": "^3.9.9"
+  }
+}

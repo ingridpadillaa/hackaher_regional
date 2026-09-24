@@ -1,5 +1,7 @@
 # PROMPT PARA CODEX — "Summa" (HackaTec 2026 · Reto HackaHer · Temática Fintech y Economía Familiar)
 
+> Organización vigente: `frontend/` contiene React, recursos visuales y `legacy/{templates,static}`. `backend/` contiene Functions, Python, catálogos y pruebas del servidor. Los Markdown se guardan en la raíz o `docs/`; `.gitignore` y las configuraciones compartidas permanecen en la raíz. Ejecuta npm y Firebase desde la raíz; Python desde `backend/`. Las rutas de las secciones históricas deben interpretarse conforme a esta estructura.
+
 > Guarda este archivo en la raíz del repositorio como `AGENTS.md`. Es la fuente de verdad del proyecto y **reemplaza la versión anterior** (que usaba el nombre provisional "Cochinito").
 
 > Actualización de integración: el equipo autorizó Firebase Blaze. La configuración real se lee únicamente del `.env` existente, sin copiar sus valores ni versionarlos. Firebase Admin usa archivo o ADC con proyecto explícito; el frontend usa solo Authentication. Los archivos de usuario continúan procesándose en memoria. Gemini usa exclusivamente GEMINI_MODEL configurado.
