@@ -1621,6 +1621,97 @@ form {
   color: var(--pink);
   font-size: 16px;
 }
+.simulation-result small {
+  display: block;
+  margin-top: 5px;
+  color: #746a76;
+  line-height: 1.35;
+}
+.simulation-details {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.simulation-equivalents {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.simulation-equivalents > div {
+  min-width: 0;
+  padding: 13px 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.simulation-equivalents small,
+.simulation-equivalents strong {
+  display: block;
+}
+.simulation-equivalents small {
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+.simulation-equivalents strong {
+  color: #342b3a;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.simulation-guidance,
+.target-date-plan {
+  border-radius: 18px;
+  padding: 15px;
+}
+.simulation-guidance.success {
+  background: #edf8f1;
+  border: 1px solid #ccebd8;
+}
+.simulation-guidance.warning {
+  background: #fff5e8;
+  border: 1px solid #f3d6a6;
+}
+.simulation-guidance.neutral,
+.target-date-plan {
+  background: #f8f3fa;
+  border: 1px solid #eadff0;
+}
+.simulation-guidance h3,
+.target-date-plan h3 {
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+.simulation-guidance p,
+.target-date-plan p {
+  color: #625867;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.simulation-guidance > small {
+  display: block;
+  margin-top: 8px;
+  color: #776d7a;
+  line-height: 1.45;
+}
+.simulation-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgb(47 166 106 / 18%);
+}
+.simulation-suggestion button {
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 800;
+}
 .encouragement {
   display: flex;
   align-items: center;
@@ -1832,6 +1923,22 @@ form {
   }
   .simulation-result b {
     display: inline;
+  }
+  .simulation-equivalents {
+    grid-template-columns: 1fr;
+  }
+  .simulation-equivalents > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .simulation-equivalents small {
+    margin-bottom: 0;
+  }
+  .simulation-suggestion {
+    align-items: flex-start;
+    flex-direction: column;
   }
   .modal-inner {
     padding: 28px 18px 22px;

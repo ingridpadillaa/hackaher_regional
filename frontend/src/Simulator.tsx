@@ -11,6 +11,47 @@ import {
 import { type State, type Goal, money, dateLabel } from "./types";
 import { Jami, Button, Field, Modal, ErrorText, Empty } from "./ui";
 import { call, errorMessage } from "./firebase";
+
+type SavingsPeriod = "mes" | "semana" | "día";
+
+const DAYS_PER_YEAR = 365;
+const WEEKS_PER_YEAR = 52;
+const MONTHS_PER_YEAR = 12;
+
+function monthlyEquivalent(amount: number, period: SavingsPeriod) {
+  if (period === "día") return (amount * DAYS_PER_YEAR) / MONTHS_PER_YEAR;
+  if (period === "semana") return (amount * WEEKS_PER_YEAR) / MONTHS_PER_YEAR;
+  return amount;
+}
+
+function periodEquivalent(monthly: number, period: SavingsPeriod) {
+  if (period === "día") return (monthly * MONTHS_PER_YEAR) / DAYS_PER_YEAR;
+  if (period === "semana") return (monthly * MONTHS_PER_YEAR) / WEEKS_PER_YEAR;
+  return monthly;
+}
+
+function addPeriods(date: string, count: number, period: SavingsPeriod) {
+  const result = new Date(`${date}T12:00:00`);
+  if (period === "mes") result.setMonth(result.getMonth() + count);
+  else result.setDate(result.getDate() + count * (period === "semana" ? 7 : 1));
+  return result.toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function daysBetween(from: string, to: string) {
+  const start = new Date(`${from}T12:00:00`).getTime();
+  const end = new Date(`${to}T12:00:00`).getTime();
+  return Math.ceil((end - start) / 86_400_000);
+}
+
+function pluralPeriod(period: SavingsPeriod, count: number) {
+  if (count === 1) return period;
+  return period === "mes" ? "meses" : period === "día" ? "días" : "semanas";
+}
+
 export function Simulator({
   state,
   onSaved,
@@ -73,15 +114,54 @@ export function Simulator({
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
   const [amount, setAmount] = useState("");
-  const [period, setPeriod] = useState("mes");
+  const [period, setPeriod] = useState<SavingsPeriod>("mes");
   const [selected, setSelected] = useState(state.goals[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
   const [bankOpen, setBankOpen] = useState(false);
   const [error, setError] = useState("");
   const goal = state.goals.find((g) => g.id === selected) ?? state.goals[0];
   const remaining = goal ? Math.max(0, goal.target - goal.saved) : 0;
-  const duration =
-    Number(amount) > 0 ? Math.ceil(remaining / Number(amount)) : null;
+  const contribution = Number(amount);
+  const duration = contribution > 0 ? Math.ceil(remaining / contribution) : null;
+  const contributionMonthly =
+    contribution > 0 ? monthlyEquivalent(contribution, period) : 0;
+  const equivalents = {
+    day: periodEquivalent(contributionMonthly, "día"),
+    week: periodEquivalent(contributionMonthly, "semana"),
+    month: contributionMonthly,
+  };
+  const incomeBasis =
+    state.summary.receivedIncome > 0
+      ? state.summary.receivedIncome
+      : state.expectedIncome;
+  const availableMonthly = Math.max(0, incomeBasis - state.summary.expenses);
+  const suggestedMonthly =
+    incomeBasis > 0 && availableMonthly > 0
+      ? Math.min(
+          availableMonthly,
+          Math.max(
+            incomeBasis * 0.05,
+            Math.min(incomeBasis * 0.2, availableMonthly * 0.5),
+          ),
+        )
+      : 0;
+  const hasFinancialData = incomeBasis > 0 || state.summary.expenses > 0;
+  const exceedsAvailable =
+    contributionMonthly > 0 && contributionMonthly > availableMonthly;
+  const targetDays = goal?.targetDate
+    ? daysBetween(state.date, goal.targetDate)
+    : null;
+  const targetRates =
+    targetDays && targetDays > 0 && remaining > 0
+      ? {
+          day: remaining / targetDays,
+          week: (remaining / targetDays) * 7,
+          month: (remaining / targetDays) * (DAYS_PER_YEAR / MONTHS_PER_YEAR),
+        }
+      : null;
+  function useSuggestion() {
+    setAmount(periodEquivalent(suggestedMonthly, period).toFixed(2));
+  }
   function edit(g: Goal | null) {
     setEditing(g);
     setName(g?.name ?? "");
@@ -303,7 +383,7 @@ export function Simulator({
             <select
               aria-label="Frecuencia de ahorro"
               value={period}
-              onChange={(e) => setPeriod(e.target.value)}
+              onChange={(e) => setPeriod(e.target.value as SavingsPeriod)}
             >
               <option value="mes">Ahorro mensual</option>
               <option value="semana">Ahorro semanal</option>
@@ -315,26 +395,103 @@ export function Simulator({
           {!goal ? (
             <p>Primero crea una meta.</p>
           ) : duration !== null ? (
-            <p>
-              Con {money(Number(amount))} por {period}, tu meta se alcanzaría en{" "}
-              <b>
-                {duration}{" "}
-                {duration === 1
-                  ? period
-                  : period === "mes"
-                    ? "meses"
-                    : period === "día"
-                      ? "días"
-                      : "semanas"}
-              </b>
-            </p>
+            remaining === 0 ? (
+              <p>
+                Esta meta ya está completa. <b>¡Lo lograste!</b>
+              </p>
+            ) : (
+              <div>
+                <p>
+                  Con {money(contribution)} por {period}, alcanzarías tu meta en
+                </p>
+                <b>
+                  {duration} {pluralPeriod(period, duration)}
+                </b>
+                <small>Fecha estimada: {addPeriods(state.date, duration, period)}</small>
+              </div>
+            )
           ) : (
             <p>Ingresa un aporte para calcular el tiempo.</p>
           )}
         </div>
       </section>
+      {goal && contribution > 0 && remaining > 0 && (
+        <section className="simulation-details" aria-live="polite">
+          <div className="simulation-equivalents">
+            <div>
+              <small>Equivale por día</small>
+              <strong>{money(equivalents.day)}</strong>
+            </div>
+            <div>
+              <small>Equivale por semana</small>
+              <strong>{money(equivalents.week)}</strong>
+            </div>
+            <div>
+              <small>Equivale por mes</small>
+              <strong>{money(equivalents.month)}</strong>
+            </div>
+          </div>
+          <div
+            className={`simulation-guidance ${
+              !hasFinancialData ? "neutral" : exceedsAvailable ? "warning" : "success"
+            }`}
+          >
+            <h3>¿Cabe en tus finanzas?</h3>
+            {!hasFinancialData ? (
+              <p>
+                Aún no hay ingresos ni gastos suficientes para evaluar esta
+                aportación. El tiempo mostrado es solo una simulación matemática.
+              </p>
+            ) : exceedsAvailable ? (
+              <p>
+                Tu plan equivale a {money(contributionMonthly)} al mes y supera por{" "}
+                <strong>{money(contributionMonthly - availableMonthly)}</strong> el
+                disponible calculado con tus datos de este mes.
+              </p>
+            ) : (
+              <p>
+                Tu plan equivale a {money(contributionMonthly)} al mes y sí cabe en
+                el disponible calculado con tus datos actuales.
+              </p>
+            )}
+            {hasFinancialData && (
+              <small>
+                Ingreso {state.summary.receivedIncome > 0 ? "registrado" : "declarado"}:{" "}
+                {money(incomeBasis)} · Gastos registrados: {money(state.summary.expenses)} ·
+                Disponible: {money(availableMonthly)}
+              </small>
+            )}
+            {suggestedMonthly > 0 && (
+              <div className="simulation-suggestion">
+                <p>
+                  Aportación sugerida: <strong>{money(suggestedMonthly)} al mes</strong>
+                </p>
+                <button type="button" onClick={useSuggestion}>
+                  Usar sugerencia
+                </button>
+              </div>
+            )}
+          </div>
+          {goal.targetDate && (
+            <div className="target-date-plan">
+              <h3>Para llegar el {dateLabel(goal.targetDate)}</h3>
+              {targetRates ? (
+                <p>
+                  Necesitarías ahorrar aproximadamente {money(targetRates.day)} al día, {" "}
+                  {money(targetRates.week)} a la semana o {money(targetRates.month)} al mes.
+                </p>
+              ) : remaining === 0 ? (
+                <p>Ya alcanzaste esta meta.</p>
+              ) : (
+                <p>La fecha objetivo ya pasó. Edita la meta para elegir una nueva fecha.</p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
       <p className="helper">
-        La simulación no mueve dinero ni modifica tus aportaciones registradas.
+        La simulación usa los datos registrados del mes. No mueve dinero ni modifica
+        tus aportaciones.
       </p>
       <div className="encouragement">
         <div>
