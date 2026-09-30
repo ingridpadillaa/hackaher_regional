@@ -25,7 +25,6 @@ export function Cart({
     state: "",
     source: "manual",
   });
-  const [historical, setHistorical] = useState(true);
   const [items, setItems] = useState<CartItem[]>(state.cart);
   const [term, setTerm] = useState("");
   const [products, setProducts] = useState<any[]>([]);
@@ -69,7 +68,7 @@ export function Cart({
       return;
     }
     const timer = window.setTimeout(() => {
-      call("compareCart", { items, area, historical, sort: "price" })
+      call("compareCart", { items, area, historical: true, sort: "price" })
         .then((r) => {
           if (live && version === comparisonVersion.current) {
             setOffers(r);
@@ -82,7 +81,7 @@ export function Cart({
       live = false;
       window.clearTimeout(timer);
     };
-  }, [items, area, historical]);
+  }, [items, area]);
   function update(next: CartItem[]) {
     setItems(next);
     setDirty(true);
@@ -294,21 +293,6 @@ export function Cart({
       <section className="card" aria-label="Supermercados cercanos">
         <h2>Zona para esta compra</h2>
         <LocationPicker temporary value={area} onChange={setArea} />
-        <label className="check-line">
-          <input
-            type="checkbox"
-            checked={historical}
-            onChange={(e) => setHistorical(e.target.checked)}
-          />
-          <span>
-            Incluir referencias históricas de más de 30 días. No son precios
-            actuales.
-          </span>
-        </label>
-        <p className="helper">
-          Sucursales del catálogo PROFECO. La distancia es aproximada en línea
-          recta, no una ruta. Las valoraciones de Google no están conectadas.
-        </p>
       </section>
       <div className="section-heading comparison-title">
         <BarChart3 className="pink" />
@@ -322,7 +306,7 @@ export function Cart({
         <Empty>
           {dirty
             ? "Guarda tu lista para actualizar las opciones."
-            : "No hay comparaciones para esta lista y zona. Busca productos del catálogo, revisa la ubicación o habilita referencias históricas."}
+            : "No hay comparaciones para esta lista y zona. Busca productos del catálogo o revisa la ubicación."}
         </Empty>
       ) : (
         <>
