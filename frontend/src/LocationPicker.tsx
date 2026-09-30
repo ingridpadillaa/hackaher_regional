@@ -137,47 +137,45 @@ export function LocationPicker({
     <section className="location-picker">
       <p className="helper">
         {temporary
-          ? "La ubicación para esta compra es temporal y no cambia tu hogar. Al usar tu ubicación, Summa consulta OpenStreetMap para completar municipio y estado. Si el dispositivo no responde, usa una zona aproximada basada en tu conexión."
+          ? "La ubicación para esta compra es temporal y no cambia tu hogar. Puedes escribir el municipio y estado, o pedir que el dispositivo los detecte. Al usar tu ubicación, Summa consulta OpenStreetMap para completar la zona."
           : "Edita el municipio y estado donde vive tu hogar. Esta ubicación fija se guardará al confirmar; no cambia cuando te desplazas. No necesitamos tu domicilio exacto."}{" "}
         Al abrir el mapa compartirás la zona seleccionada con Google Maps.
       </p>
-      {!temporary && (
-        <div className="form-grid">
-          <Field label="Municipio">
-            <input
-              required
-              maxLength={120}
-              disabled={disabled}
-              value={value.municipality}
-              onChange={(e) => {
-                setError("");
-                setStatus("");
-                onChange({
-                  state: value.state,
-                  municipality: e.target.value,
-                  source: "manual",
-                });
-              }}
-            />
-          </Field>
-          <Field label="Estado">
-            <input
-              maxLength={120}
-              disabled={disabled}
-              value={value.state}
-              onChange={(e) => {
-                setError("");
-                setStatus("");
-                onChange({
-                  municipality: value.municipality,
-                  state: e.target.value,
-                  source: "manual",
-                });
-              }}
-            />
-          </Field>
-        </div>
-      )}
+      <div className="form-grid">
+        <Field label="Municipio">
+          <input
+            required
+            maxLength={120}
+            disabled={disabled}
+            value={value.municipality}
+            onChange={(e) => {
+              setError("");
+              setStatus("");
+              onChange({
+                state: value.state,
+                municipality: e.target.value,
+                source: "manual",
+              });
+            }}
+          />
+        </Field>
+        <Field label="Estado">
+          <input
+            maxLength={120}
+            disabled={disabled}
+            value={value.state}
+            onChange={(e) => {
+              setError("");
+              setStatus("");
+              onChange({
+                municipality: value.municipality,
+                state: e.target.value,
+                source: "manual",
+              });
+            }}
+          />
+        </Field>
+      </div>
       {temporary && (
         <Button
           type="button"
@@ -189,7 +187,7 @@ export function LocationPicker({
             ? "Obteniendo ubicación…"
             : coordinates
               ? "Actualizar mi ubicación"
-              : "Usar mi ubicación"}
+              : "Detectar mi ubicación"}
         </Button>
       )}
       {coordinates && (
