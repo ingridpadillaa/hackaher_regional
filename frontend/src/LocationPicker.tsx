@@ -54,50 +54,75 @@ export function LocationPicker({
       return;
     }
     setBusy(true);
-    navigator.geolocation.getCurrentPosition(
-      async (p) => {
-        if (!Number.isFinite(p.coords.accuracy) || p.coords.accuracy > 2000) {
-          setError(
-            "La ubicación obtenida es demasiado aproximada. Activa la ubicación precisa del dispositivo y vuelve a intentar.",
-          );
-          setBusy(false);
-          return;
-        }
-        const latitude = Number(p.coords.latitude.toFixed(4));
-        const longitude = Number(p.coords.longitude.toFixed(4));
-        try {
-          await applyCoordinates(latitude, longitude);
-        } catch {
-          setStatus("");
-          setError(
-            temporary
-              ? "Obtuvimos las coordenadas, pero no pudimos identificar la zona. Vuelve a intentar."
-              : "Obtuvimos tus coordenadas, pero no pudimos identificar municipio y estado. Confírmalos manualmente.",
-          );
-        } finally {
-          setBusy(false);
-        }
-      },
-      async (e) => {
+    setStatus("Buscando una ubicación precisa…");
+    let best: GeolocationPosition | null = null;
+    let watchId: number | undefined;
+    let finished = false;
+    let timer: number;
+    const stop = () => {
+      if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+      window.clearTimeout(timer);
+    };
+    const fail = (message: string) => {
+      if (finished) return;
+      finished = true;
+      stop();
+      setStatus("");
+      setError(message);
+      setBusy(false);
+    };
+    const accept = async (position: GeolocationPosition) => {
+      if (finished) return;
+      finished = true;
+      stop();
+      const latitude = Number(position.coords.latitude.toFixed(5));
+      const longitude = Number(position.coords.longitude.toFixed(5));
+      try {
+        await applyCoordinates(latitude, longitude);
+      } catch {
         setStatus("");
-        const messages: Record<number, string> = temporary
-          ? {
-              1: "No autorizaste la ubicación. Habilita el permiso de ubicación para este sitio y vuelve a intentar.",
-              2: "Tu dispositivo no pudo determinar la ubicación. Activa la ubicación del sistema y vuelve a intentar.",
-              3: "La ubicación precisa tardó demasiado. Revisa que la ubicación del dispositivo esté activa y vuelve a intentar.",
-            }
-          : {
-              1: "No autorizaste la ubicación. Habilítala en el navegador o usa el municipio.",
-              2: "Tu dispositivo no pudo determinar la ubicación. Activa la ubicación del sistema o usa el municipio.",
-              3: "La ubicación tardó demasiado. Intenta otra vez o usa el municipio.",
-            };
         setError(
-          messages[e.code] ??
-            "No pudimos obtener tu ubicación. Intenta de nuevo o usa el municipio.",
+          temporary
+            ? "Obtuvimos las coordenadas, pero no pudimos identificar la zona. Vuelve a intentar."
+            : "Obtuvimos tus coordenadas, pero no pudimos identificar municipio y estado. Confírmalos manualmente.",
         );
+      } finally {
         setBusy(false);
+      }
+    };
+    timer = window.setTimeout(() => {
+      if (best && best.coords.accuracy <= 250) void accept(best);
+      else
+        fail(
+          "El dispositivo no logró una ubicación precisa. Activa la ubicación precisa de Windows o del teléfono y vuelve a intentar.",
+        );
+    }, 18000);
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        if (
+          !Number.isFinite(position.coords.latitude) ||
+          !Number.isFinite(position.coords.longitude) ||
+          !Number.isFinite(position.coords.accuracy)
+        )
+          return;
+        if (!best || position.coords.accuracy < best.coords.accuracy)
+          best = position;
+        setStatus(
+          `Afinando ubicación… precisión aproximada de ${Math.round(best.coords.accuracy)} m.`,
+        );
+        if (best.coords.accuracy <= 80) void accept(best);
       },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+      (e) => {
+        if (e.code === e.PERMISSION_DENIED)
+          fail(
+            "No autorizaste la ubicación. Habilita el permiso de ubicación precisa para este sitio y vuelve a intentar.",
+          );
+        else if (!best && e.code === e.POSITION_UNAVAILABLE)
+          fail(
+            "El dispositivo no pudo determinar tu ubicación. Activa la ubicación del sistema y vuelve a intentar.",
+          );
+      },
+      { enableHighAccuracy: true, timeout: 18000, maximumAge: 0 },
     );
   }
   return (
