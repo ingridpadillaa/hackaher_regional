@@ -20,13 +20,11 @@ export function Cart({
   state: State;
   onSaved: () => Promise<void>;
 }) {
-  const [area, setArea] = useState<Area>(() =>
-    state.home?.location ?? {
-      municipality: state.home?.preferences?.municipality ?? "",
-      state: "",
-      source: "manual",
-    },
-  );
+  const [area, setArea] = useState<Area>({
+    municipality: "",
+    state: "",
+    source: "manual",
+  });
   const [historical, setHistorical] = useState(true);
   const [sort, setSort] = useState("price");
   const [items, setItems] = useState<CartItem[]>(state.cart);
@@ -67,7 +65,7 @@ export function Cart({
     let live = true;
     const version = ++comparisonVersion.current;
     setOffers([]);
-    if (area.municipality.trim().length < 2) {
+    if (area.latitude === undefined || area.longitude === undefined) {
       setError("");
       return;
     }

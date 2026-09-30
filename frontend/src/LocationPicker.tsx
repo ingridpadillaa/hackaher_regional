@@ -27,11 +27,7 @@ export function LocationPicker({
   const query = coordinates
     ? `${value.latitude},${value.longitude}`
     : [value.municipality, value.state, "México"].filter(Boolean).join(", ");
-  async function applyCoordinates(
-    latitude: number,
-    longitude: number,
-    approximate = false,
-  ) {
+  async function applyCoordinates(latitude: number, longitude: number) {
     setStatus("Ubicación obtenida. Identificando municipio y estado…");
     const detected = await call<Area>("reverseLocation", {
       latitude,
@@ -40,36 +36,8 @@ export function LocationPicker({
     onChange(detected);
     setStatus(
       temporary
-        ? `${approximate ? "Zona aproximada" : "Zona detectada"}: ${detected.municipality}, ${detected.state}. Actualizando tiendas cercanas.`
+        ? `Zona detectada: ${detected.municipality}, ${detected.state}. Actualizando tiendas cercanas.`
         : `Zona detectada: ${detected.municipality}, ${detected.state}. Presiona Guardar zona para actualizar tu hogar.`,
-    );
-  }
-  async function locateFromNetwork() {
-    setStatus(
-      "El dispositivo no respondió. Buscando una zona aproximada con tu conexión…",
-    );
-    const response = await fetch("https://ipapi.co/json/", {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!response.ok) throw new Error("Network location unavailable");
-    const result = (await response.json()) as {
-      latitude?: unknown;
-      longitude?: unknown;
-      country_code?: unknown;
-    };
-    const latitude = Number(result.latitude);
-    const longitude = Number(result.longitude);
-    if (
-      !Number.isFinite(latitude) ||
-      !Number.isFinite(longitude) ||
-      String(result.country_code ?? "").toUpperCase() !== "MX"
-    )
-      throw new Error("Invalid network location");
-    await applyCoordinates(
-      Number(latitude.toFixed(4)),
-      Number(longitude.toFixed(4)),
-      true,
     );
   }
   function locate() {
@@ -88,6 +56,13 @@ export function LocationPicker({
     setBusy(true);
     navigator.geolocation.getCurrentPosition(
       async (p) => {
+        if (!Number.isFinite(p.coords.accuracy) || p.coords.accuracy > 2000) {
+          setError(
+            "La ubicación obtenida es demasiado aproximada. Activa la ubicación precisa del dispositivo y vuelve a intentar.",
+          );
+          setBusy(false);
+          return;
+        }
         const latitude = Number(p.coords.latitude.toFixed(4));
         const longitude = Number(p.coords.longitude.toFixed(4));
         try {
@@ -104,20 +79,12 @@ export function LocationPicker({
         }
       },
       async (e) => {
-        if (temporary) {
-          try {
-            await locateFromNetwork();
-            setBusy(false);
-            return;
-          } catch {
-            setStatus("");
-          }
-        }
+        setStatus("");
         const messages: Record<number, string> = temporary
           ? {
               1: "No autorizaste la ubicación. Habilita el permiso de ubicación para este sitio y vuelve a intentar.",
               2: "Tu dispositivo no pudo determinar la ubicación. Activa la ubicación del sistema y vuelve a intentar.",
-              3: "No pudimos detectar tu zona ni con el dispositivo ni con la conexión. Revisa que la ubicación de Windows esté activa y vuelve a intentar.",
+              3: "La ubicación precisa tardó demasiado. Revisa que la ubicación del dispositivo esté activa y vuelve a intentar.",
             }
           : {
               1: "No autorizaste la ubicación. Habilítala en el navegador o usa el municipio.",
@@ -130,52 +97,54 @@ export function LocationPicker({
         );
         setBusy(false);
       },
-      { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     );
   }
   return (
     <section className="location-picker">
       <p className="helper">
         {temporary
-          ? "La ubicación para esta compra es temporal y no cambia tu hogar. Puedes escribir el municipio y estado, o pedir que el dispositivo los detecte. Al usar tu ubicación, Summa consulta OpenStreetMap para completar la zona."
+          ? "La ubicación para esta compra es temporal y no cambia tu hogar. Al usar tu ubicación, Summa solicita la posición precisa del dispositivo y consulta OpenStreetMap para completar municipio y estado."
           : "Edita el municipio y estado donde vive tu hogar. Esta ubicación fija se guardará al confirmar; no cambia cuando te desplazas. No necesitamos tu domicilio exacto."}{" "}
         Al abrir el mapa compartirás la zona seleccionada con Google Maps.
       </p>
-      <div className="form-grid">
-        <Field label="Municipio">
-          <input
-            required
-            maxLength={120}
-            disabled={disabled}
-            value={value.municipality}
-            onChange={(e) => {
-              setError("");
-              setStatus("");
-              onChange({
-                state: value.state,
-                municipality: e.target.value,
-                source: "manual",
-              });
-            }}
-          />
-        </Field>
-        <Field label="Estado">
-          <input
-            maxLength={120}
-            disabled={disabled}
-            value={value.state}
-            onChange={(e) => {
-              setError("");
-              setStatus("");
-              onChange({
-                municipality: value.municipality,
-                state: e.target.value,
-                source: "manual",
-              });
-            }}
-          />
-        </Field>
-      </div>
+      {!temporary && (
+        <div className="form-grid">
+          <Field label="Municipio">
+            <input
+              required
+              maxLength={120}
+              disabled={disabled}
+              value={value.municipality}
+              onChange={(e) => {
+                setError("");
+                setStatus("");
+                onChange({
+                  state: value.state,
+                  municipality: e.target.value,
+                  source: "manual",
+                });
+              }}
+            />
+          </Field>
+          <Field label="Estado">
+            <input
+              maxLength={120}
+              disabled={disabled}
+              value={value.state}
+              onChange={(e) => {
+                setError("");
+                setStatus("");
+                onChange({
+                  municipality: value.municipality,
+                  state: e.target.value,
+                  source: "manual",
+                });
+              }}
+            />
+          </Field>
+        </div>
+      )}
       {temporary && (
         <Button
           type="button"
