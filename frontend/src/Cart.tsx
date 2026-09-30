@@ -372,6 +372,18 @@ export function Cart({
                 {s.distanceKm !== null && (
                   <small>{s.distanceKm} km aprox.</small>
                 )}
+                {s.locationFallback && (
+                  <small>
+                    Mostramos sucursales del municipio porque la ubicación del
+                    dispositivo fue aproximada.
+                  </small>
+                )}
+                {s.missingCount > 0 && (
+                  <small>
+                    Faltan: {s.missing.slice(0, 2).join(", ")}
+                    {s.missingCount > 2 ? ` y ${s.missingCount - 2} más` : ""}.
+                  </small>
+                )}
                 <small>{s.address}</small>
                 {s.staleCount > 0 && (
                   <small>{s.staleCount} precios de más de 30 días.</small>

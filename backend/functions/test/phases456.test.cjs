@@ -1,7 +1,10 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { reconcileReceipt, ruleKey } = require("../lib/receipts");
-const { compareStores } = require("../lib/catalog");
+const {
+  compareStores,
+  compareStoresWithMunicipalityFallback,
+} = require("../lib/catalog");
 const {
   locationSchema,
   distanceKm,
@@ -141,6 +144,45 @@ test("location requires paired valid coordinates; unknown and far locations cann
     ).length,
     0,
   );
+});
+test("a detected municipality still compares its catalogued branches when device coordinates are approximate", () => {
+  const stores = [
+    {
+      id: "saltillo",
+      name: "Sucursal Saltillo",
+      address: "Saltillo",
+      municipality: "Saltillo",
+      latitude: 25.43,
+      longitude: -101,
+    },
+  ];
+  const items = [{ id: "milk", name: "Leche", quantity: 1 }];
+  const prices = [
+    {
+      productId: "milk",
+      storeId: "saltillo",
+      price: 30,
+      date: "2026-09-24",
+      source: "PROFECO",
+    },
+  ];
+  const result = compareStoresWithMunicipalityFallback(
+    items,
+    stores,
+    prices,
+    {
+      municipality: "Saltillo",
+      state: "Coahuila",
+      latitude: 26,
+      longitude: -102,
+      source: "browser",
+    },
+    "2026-09-24",
+  );
+  assert.equal(result.length, 1);
+  assert.equal(result[0].total, 30);
+  assert.equal(result[0].locationFallback, true);
+  assert.equal(result[0].distanceKm, null);
 });
 test("reverse location favors the administrative municipality and supports locality fallbacks", () => {
   assert.deepEqual(

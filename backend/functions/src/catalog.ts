@@ -100,19 +100,83 @@ export function compareStores(
     })
     .slice(0, 3);
 }
+
+export function compareStoresWithMunicipalityFallback(
+  items: any[],
+  stores: any[],
+  prices: any[],
+  area: any,
+  today: string,
+  historical = false,
+  sort = "price",
+) {
+  const nearby = compareStores(
+    items,
+    stores,
+    prices,
+    area,
+    today,
+    historical,
+    sort,
+  );
+  if (
+    nearby.length ||
+    area.latitude === undefined ||
+    area.longitude === undefined ||
+    !normalize(area.municipality ?? "")
+  )
+    return nearby;
+
+  // Browser/network coordinates can be approximate even when reverse
+  // geocoding identifies the correct municipality. Keep the comparison useful
+  // with branches explicitly catalogued in that municipality, without
+  // presenting an unreliable distance as exact.
+  const municipalityResults = compareStores(
+    items,
+    stores,
+    prices,
+    {
+      municipality: area.municipality,
+      state: area.state,
+      source: area.source,
+    },
+    today,
+    historical,
+    sort,
+  );
+  return municipalityResults.map((store) => ({
+    ...store,
+    locationFallback: true,
+  }));
+}
+
 export async function catalogStores(db: any, area: any) {
-  // With exact coordinates, include neighboring municipalities in the same
-  // state and let the distance filter choose nearby branches. This matters in
-  // contiguous metro areas such as Ciudad Madero–Tampico.
+  // Prefer the municipality returned by reverse geocoding. This avoids losing
+  // valid branches when providers use a different official state name (for
+  // example, "Coahuila" versus "Coahuila de Zaragoza").
   const hasCoordinates =
     area.latitude !== undefined && area.longitude !== undefined;
+  const municipalityKey = normalize(area.municipality ?? "");
   const stateKey = normalize(area.state ?? "");
-  const field = hasCoordinates && stateKey ? "stateKey" : "municipalityKey";
-  const value =
-    field === "stateKey" ? stateKey : normalize(area.municipality ?? "");
-  const query = db
-    .collection("stores")
-    .where(field, "==", value);
-  const snap = await query.limit(250).get();
-  return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+  if (municipalityKey) {
+    const municipality = await db
+      .collection("stores")
+      .where("municipalityKey", "==", municipalityKey)
+      .limit(250)
+      .get();
+    if (!municipality.empty)
+      return municipality.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+  }
+
+  // If a locality is part of a contiguous metro area, fall back to the state
+  // and let the distance filter select branches within 20 km.
+  if (hasCoordinates && stateKey) {
+    const state = await db
+      .collection("stores")
+      .where("stateKey", "==", stateKey)
+      .limit(250)
+      .get();
+    return state.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+  }
+  return [];
 }

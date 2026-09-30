@@ -16,7 +16,10 @@ import {
   ledgerSummary,
   savingsStats,
 } from "./finance";
-import { compareStores, catalogStores } from "./catalog";
+import {
+  compareStoresWithMunicipalityFallback,
+  catalogStores,
+} from "./catalog";
 import { prepareHebCart } from "./retailer-cart";
 import {
   coordinatesSchema,
@@ -1086,7 +1089,7 @@ async function handle(
       );
       for (const snap of snapshots) if (snap.exists) prices.push(snap.data());
     }
-    return compareStores(
+    return compareStoresWithMunicipalityFallback(
       items,
       stores,
       prices,
