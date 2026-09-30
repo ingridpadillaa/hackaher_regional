@@ -2389,6 +2389,11 @@ details p {
 .store-card {
   min-width: 0;
 }
+.store-grid > .store-card.rank-2:last-child {
+  grid-column: 1 / -1;
+  width: calc((100% - 8px) / 2);
+  justify-self: center;
+}
 .store-card h3 {
   overflow-wrap: anywhere;
   font-size: 17px;
@@ -2408,6 +2413,10 @@ details p {
   }
   .store-grid {
     grid-template-columns: 1fr;
+  }
+  .store-grid > .store-card.rank-2:last-child {
+    grid-column: auto;
+    width: 100%;
   }
 }
 
