@@ -331,32 +331,6 @@ export function Profile({
           </p>
         )}
       </form>
-      {!initial && (
-        <section className="card">
-          <h2>Zona del hogar</h2>
-          <LocationPicker value={area} onChange={setArea} disabled={!owner} />
-          {owner && (
-            <Button
-              busy={busy}
-              onClick={async () => {
-                setBusy(true);
-                setError("");
-                try {
-                  await call("saveLocation", area);
-                  await onSaved();
-                  setSaved(true);
-                } catch (e) {
-                  setError(errorMessage(e));
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Guardar zona
-            </Button>
-          )}
-        </section>
-      )}
       <ShareHome
         code={home.invitationCode}
         expiresAt={home.invitationExpiresAt}
