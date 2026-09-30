@@ -64,10 +64,7 @@ export function Cart({
     let live = true;
     const version = ++comparisonVersion.current;
     setOffers([]);
-    if (
-      (area.latitude === undefined || area.longitude === undefined) &&
-      area.municipality.trim().length < 2
-    ) {
+    if (area.latitude === undefined || area.longitude === undefined) {
       setError("");
       return;
     }
@@ -296,21 +293,7 @@ export function Cart({
       </section>
       <section className="card" aria-label="Supermercados cercanos">
         <h2>Zona para esta compra</h2>
-        <LocationPicker
-          temporary
-          value={area}
-          onChange={setArea}
-          fallback={
-            state.home?.location ??
-            (state.home?.preferences?.municipality
-              ? {
-                  municipality: state.home.preferences.municipality,
-                  state: "",
-                  source: "manual",
-                }
-              : undefined)
-          }
-        />
+        <LocationPicker temporary value={area} onChange={setArea} />
         <label className="check-line">
           <input
             type="checkbox"
