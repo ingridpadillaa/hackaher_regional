@@ -26,7 +26,6 @@ export function Cart({
     source: "manual",
   });
   const [historical, setHistorical] = useState(true);
-  const [sort, setSort] = useState("price");
   const [items, setItems] = useState<CartItem[]>(state.cart);
   const [term, setTerm] = useState("");
   const [products, setProducts] = useState<any[]>([]);
@@ -65,12 +64,15 @@ export function Cart({
     let live = true;
     const version = ++comparisonVersion.current;
     setOffers([]);
-    if (area.latitude === undefined || area.longitude === undefined) {
+    if (
+      (area.latitude === undefined || area.longitude === undefined) &&
+      area.municipality.trim().length < 2
+    ) {
       setError("");
       return;
     }
     const timer = window.setTimeout(() => {
-      call("compareCart", { items, area, historical, sort })
+      call("compareCart", { items, area, historical, sort: "price" })
         .then((r) => {
           if (live && version === comparisonVersion.current) {
             setOffers(r);
@@ -83,7 +85,7 @@ export function Cart({
       live = false;
       window.clearTimeout(timer);
     };
-  }, [items, area, historical, sort]);
+  }, [items, area, historical]);
   function update(next: CartItem[]) {
     setItems(next);
     setDirty(true);
@@ -294,13 +296,21 @@ export function Cart({
       </section>
       <section className="card" aria-label="Supermercados cercanos">
         <h2>Zona para esta compra</h2>
-        <LocationPicker temporary value={area} onChange={setArea} />
-        <Field label="Ordenar sucursales">
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="price">Precio de la misma lista</option>
-            <option value="distance">Cercanía (requiere ubicación)</option>
-          </select>
-        </Field>
+        <LocationPicker
+          temporary
+          value={area}
+          onChange={setArea}
+          fallback={
+            state.home?.location ??
+            (state.home?.preferences?.municipality
+              ? {
+                  municipality: state.home.preferences.municipality,
+                  state: "",
+                  source: "manual",
+                }
+              : undefined)
+          }
+        />
         <label className="check-line">
           <input
             type="checkbox"
@@ -348,7 +358,7 @@ export function Cart({
                       <small> MXN</small>
                     </strong>
                     <span>
-                      {sort === "price" && i === 0
+                      {i === 0
                         ? "Menor total entre listas completas"
                         : "Lista completa"}
                     </span>

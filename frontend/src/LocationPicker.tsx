@@ -13,11 +13,13 @@ export function LocationPicker({
   onChange,
   disabled = false,
   temporary = false,
+  fallback,
 }: {
   value: Area;
   onChange: (a: Area) => void;
   disabled?: boolean;
   temporary?: boolean;
+  fallback?: Area;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -33,6 +35,23 @@ export function LocationPicker({
       latitude,
       longitude,
     });
+    const place = (text: string) =>
+      text
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+    if (
+      temporary &&
+      fallback?.municipality &&
+      place(detected.municipality) !== place(fallback.municipality)
+    ) {
+      onChange(fallback);
+      setStatus(
+        `El dispositivo reportó ${detected.municipality}, pero no coincide con la zona de tu hogar. Usaremos ${fallback.municipality}, ${fallback.state || "México"}.`,
+      );
+      return;
+    }
     onChange(detected);
     setStatus(
       temporary
